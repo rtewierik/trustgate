@@ -168,86 +168,91 @@ function DashboardContent() {
 
       <div style={styles.content}>
         <h1 style={styles.h1}>Verificación de identidad</h1>
-        <p style={styles.subtitle}>
-          Introduce el número y los datos del usuario. La verificación usa Number Verification, SIM Swap y KYC Match.
-        </p>
 
-        <form onSubmit={handleSubmit} style={styles.form}>
-          <div style={styles.row}>
-            <label style={styles.label}>Teléfono</label>
-            <input
-              type="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="+34XXXXXXXXX"
-              required
-              style={styles.input}
-            />
-          </div>
-          <div style={styles.row}>
-            <label style={styles.label}>País</label>
-            <select value={country} onChange={(e) => setCountry(e.target.value)} style={styles.input}>
-              <option value="ES">ES</option>
-              <option value="DE">DE</option>
-              <option value="FR">FR</option>
-              <option value="GB">GB</option>
-            </select>
-          </div>
-          <div style={styles.row}>
-            <label style={styles.label}>Nombre</label>
-            <input
-              type="text"
-              value={givenName}
-              onChange={(e) => setGivenName(e.target.value)}
-              placeholder="Ada"
-              style={styles.input}
-            />
-          </div>
-          <div style={styles.row}>
-            <label style={styles.label}>Apellidos</label>
-            <input
-              type="text"
-              value={familyName}
-              onChange={(e) => setFamilyName(e.target.value)}
-              placeholder="Lovelace"
-              style={styles.input}
-            />
-          </div>
-          <div style={styles.row}>
-            <label style={styles.label}>Fecha de nacimiento</label>
-            <input
-              type="date"
-              value={dob}
-              onChange={(e) => setDob(e.target.value)}
-              style={styles.input}
-            />
-          </div>
-          <button type="submit" disabled={loading} style={styles.button}>
-            {loading ? "Verificando…" : "Verificar"}
-          </button>
-        </form>
-
-        {error && (
-          <div style={styles.error}>
-            {error}
-          </div>
-        )}
-
-        {initiateResult && (
-          <div style={styles.result}>
-            <h2 style={styles.resultTitle}>Siguiente paso: verificación en red</h2>
-            <p style={{ marginBottom: "1rem", color: "var(--muted)" }}>
-              Se abrirá una ventana emergente para que el usuario complete la verificación con el operador. Al cerrarla, esta página se actualizará si la verificación fue exitosa.
+        {!(result && result.decision === "allow") && (
+          <>
+            <p style={styles.subtitle}>
+              Introduce el número y los datos del usuario. La verificación usa Number Verification, SIM Swap y KYC Match.
             </p>
-            <button
-              type="button"
-              onClick={openVerificationPopup}
-              style={styles.button}
-            >
-              Abrir verificación en ventana emergente
-            </button>
-            <p style={styles.muted}>Request ID: {initiateResult.verification_request_id}</p>
-          </div>
+
+            <form onSubmit={handleSubmit} style={styles.form}>
+              <div style={styles.row}>
+                <label style={styles.label}>Teléfono</label>
+                <input
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="+34XXXXXXXXX"
+                  required
+                  style={styles.input}
+                />
+              </div>
+              <div style={styles.row}>
+                <label style={styles.label}>País</label>
+                <select value={country} onChange={(e) => setCountry(e.target.value)} style={styles.input}>
+                  <option value="ES">ES</option>
+                  <option value="DE">DE</option>
+                  <option value="FR">FR</option>
+                  <option value="GB">GB</option>
+                </select>
+              </div>
+              <div style={styles.row}>
+                <label style={styles.label}>Nombre</label>
+                <input
+                  type="text"
+                  value={givenName}
+                  onChange={(e) => setGivenName(e.target.value)}
+                  placeholder="Ada"
+                  style={styles.input}
+                />
+              </div>
+              <div style={styles.row}>
+                <label style={styles.label}>Apellidos</label>
+                <input
+                  type="text"
+                  value={familyName}
+                  onChange={(e) => setFamilyName(e.target.value)}
+                  placeholder="Lovelace"
+                  style={styles.input}
+                />
+              </div>
+              <div style={styles.row}>
+                <label style={styles.label}>Fecha de nacimiento</label>
+                <input
+                  type="date"
+                  value={dob}
+                  onChange={(e) => setDob(e.target.value)}
+                  style={styles.input}
+                />
+              </div>
+              <button type="submit" disabled={loading} style={styles.button}>
+                {loading ? "Verificando…" : "Verificar"}
+              </button>
+            </form>
+
+            {error && (
+              <div style={styles.error}>
+                {error}
+              </div>
+            )}
+
+            {initiateResult && (
+              <div style={styles.result}>
+                <h2 style={styles.resultTitle}>Siguiente paso: verificación en red</h2>
+                <p style={{ marginBottom: "1rem", color: "var(--muted)" }}>
+                  Se abrirá una ventana emergente para que el usuario complete la verificación con el operador. Al cerrarla, esta página se actualizará si la verificación fue exitosa.
+                </p>
+                <button
+                  type="button"
+                  onClick={openVerificationPopup}
+                  style={styles.button}
+                >
+                  Abrir verificación en ventana emergente
+                </button>
+                <p style={styles.muted}>Request ID: {initiateResult.verification_request_id}</p>
+              </div>
+            )}
+          </>
         )}
 
         {result && (
