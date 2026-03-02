@@ -43,17 +43,17 @@ export default function HistoryPage() {
         <Link href="/" style={styles.logo}>TrustGate</Link>
         <nav style={styles.nav}>
           <Link href="/dashboard/">Dashboard</Link>
-          <Link href="/history/">Historial</Link>
+          <Link href="/history/">History</Link>
         </nav>
       </header>
 
       <div style={styles.content}>
-        <h1 style={styles.h1}>Historial de verificaciones</h1>
+        <h1 style={styles.h1}>Verification History</h1>
         <p style={styles.subtitle}>
-          Últimas verificaciones realizadas.
+          Last verifications performed.
         </p>
 
-        {loading && <p style={styles.muted}>Cargando…</p>}
+        {loading && <p style={styles.muted}>Loading…</p>}
         {error && <p style={styles.error}>{error}</p>}
 
         {!loading && !error && (
@@ -61,18 +61,18 @@ export default function HistoryPage() {
             <table style={styles.table}>
               <thead>
                 <tr>
-                  <th style={styles.th}>Teléfono</th>
-                  <th style={styles.th}>País</th>
+                  <th style={styles.th}>Phone</th>
+                  <th style={styles.th}>Country</th>
                   <th style={styles.th}>Trust Score</th>
-                  <th style={styles.th}>Decisión</th>
-                  <th style={styles.th}>Estado</th>
-                  <th style={styles.th}>Fecha</th>
+                  <th style={styles.th}>Decision</th>
+                  <th style={styles.th}>Status</th>
+                  <th style={styles.th}>Date</th>
                 </tr>
               </thead>
               <tbody>
                 {list.length === 0 ? (
                   <tr>
-                    <td colSpan={6} style={styles.empty}>Sin verificaciones aún</td>
+                    <td colSpan={6} style={styles.empty}>No verifications yet</td>
                   </tr>
                 ) : (
                   list.map((v) => (

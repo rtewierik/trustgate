@@ -3,14 +3,19 @@
 import { useState } from "react";
 import Link from "next/link";
 
-const API_BASE = typeof window !== "undefined" ? "" : process.env.NEXT_PUBLIC_API_URL || "";
+const API_BASE =
+  typeof window !== "undefined" ? "" : process.env.NEXT_PUBLIC_API_URL || "";
 
 interface VerificationResult {
   verification_id: string;
   status: string;
   trust_score: number;
   decision: string;
-  checks: Array<{ name: string; status: string; detail?: Record<string, unknown> }>;
+  checks: Array<{
+    name: string;
+    status: string;
+    detail?: Record<string, unknown>;
+  }>;
   expires_at: string;
 }
 
@@ -45,7 +50,8 @@ export default function DashboardPage() {
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || data.message || "Verification failed");
+      if (!res.ok)
+        throw new Error(data.error || data.message || "Verification failed");
       setResult(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error de red");
@@ -57,22 +63,25 @@ export default function DashboardPage() {
   return (
     <main style={styles.main}>
       <header style={styles.header}>
-        <Link href="/" style={styles.logo}>TrustGate</Link>
+        <Link href="/" style={styles.logo}>
+          TrustGate
+        </Link>
         <nav style={styles.nav}>
           <Link href="/dashboard/">Dashboard</Link>
-          <Link href="/history/">Historial</Link>
+          <Link href="/history/">History</Link>
         </nav>
       </header>
 
       <div style={styles.content}>
-        <h1 style={styles.h1}>Verificación de identidad</h1>
+        <h1 style={styles.h1}>Identity Verification</h1>
         <p style={styles.subtitle}>
-          Introduce el número y los datos del usuario. La verificación usa Number Verification, SIM Swap y KYC Match.
+          Enter the number and user details. Verification uses Number
+          Verification, SIM Swap and KYC Matching.{" "}
         </p>
 
         <form onSubmit={handleSubmit} style={styles.form}>
           <div style={styles.row}>
-            <label style={styles.label}>Teléfono</label>
+            <label style={styles.label}>Phone</label>
             <input
               type="tel"
               value={phone}
@@ -83,8 +92,12 @@ export default function DashboardPage() {
             />
           </div>
           <div style={styles.row}>
-            <label style={styles.label}>País</label>
-            <select value={country} onChange={(e) => setCountry(e.target.value)} style={styles.input}>
+            <label style={styles.label}>Country</label>
+            <select
+              value={country}
+              onChange={(e) => setCountry(e.target.value)}
+              style={styles.input}
+            >
               <option value="ES">ES</option>
               <option value="DE">DE</option>
               <option value="FR">FR</option>
@@ -92,7 +105,7 @@ export default function DashboardPage() {
             </select>
           </div>
           <div style={styles.row}>
-            <label style={styles.label}>Nombre</label>
+            <label style={styles.label}>Name</label>
             <input
               type="text"
               value={givenName}
@@ -102,7 +115,7 @@ export default function DashboardPage() {
             />
           </div>
           <div style={styles.row}>
-            <label style={styles.label}>Apellidos</label>
+            <label style={styles.label}>Last Name</label>
             <input
               type="text"
               value={familyName}
@@ -112,7 +125,7 @@ export default function DashboardPage() {
             />
           </div>
           <div style={styles.row}>
-            <label style={styles.label}>Fecha de nacimiento</label>
+            <label style={styles.label}>Date of Birth</label>
             <input
               type="date"
               value={dob}
@@ -121,19 +134,23 @@ export default function DashboardPage() {
             />
           </div>
           <button type="submit" disabled={loading} style={styles.button}>
-            {loading ? "Verificando…" : "Verificar"}
+            {loading ? "Verifying…" : "Verify"}
           </button>
         </form>
 
-        {error && (
-          <div style={styles.error}>
-            {error}
-          </div>
-        )}
+        {error && <div style={styles.error}>{error}</div>}
 
         {result && (
           <div style={styles.result}>
-            <h2 style={{ ...styles.resultTitle, color: result.decision === "allow" ? "var(--success)" : "var(--danger)" }}>
+            <h2
+              style={{
+                ...styles.resultTitle,
+                color:
+                  result.decision === "allow"
+                    ? "var(--success)"
+                    : "var(--danger)",
+              }}
+            >
               {result.decision === "allow" ? "✓ Aprobado" : "✗ Denegado"}
             </h2>
             <p style={styles.trustScore}>
@@ -143,7 +160,17 @@ export default function DashboardPage() {
             <ul style={styles.checks}>
               {result.checks.map((c) => (
                 <li key={c.name}>
-                  {c.name}: <span style={{ color: c.status === "pass" ? "var(--success)" : "var(--danger)" }}>{c.status}</span>
+                  {c.name}:{" "}
+                  <span
+                    style={{
+                      color:
+                        c.status === "pass"
+                          ? "var(--success)"
+                          : "var(--danger)",
+                    }}
+                  >
+                    {c.status}
+                  </span>
                   {c.detail && ` (${JSON.stringify(c.detail)})`}
                 </li>
               ))}
@@ -167,9 +194,19 @@ const styles: Record<string, React.CSSProperties> = {
   },
   logo: { fontSize: "1.25rem", fontWeight: 700, color: "var(--accent)" },
   nav: { display: "flex", gap: "1.5rem" },
-  content: { flex: 1, padding: "2rem", maxWidth: "560px", margin: "0 auto", width: "100%" },
+  content: {
+    flex: 1,
+    padding: "2rem",
+    maxWidth: "560px",
+    margin: "0 auto",
+    width: "100%",
+  },
   h1: { marginBottom: "0.5rem", fontSize: "1.5rem" },
-  subtitle: { color: "var(--muted)", marginBottom: "1.5rem", fontSize: "0.9rem" },
+  subtitle: {
+    color: "var(--muted)",
+    marginBottom: "1.5rem",
+    fontSize: "0.9rem",
+  },
   form: { display: "flex", flexDirection: "column", gap: "1rem" },
   row: { display: "flex", flexDirection: "column", gap: "0.25rem" },
   label: { fontSize: "0.875rem", color: "var(--muted)" },

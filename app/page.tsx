@@ -7,50 +7,50 @@ export default function LandingPage() {
         <span style={styles.logo}>TrustGate</span>
         <nav style={styles.nav}>
           <Link href="/dashboard/">Dashboard</Link>
-          <Link href="/history/">Historial</Link>
+          <Link href="/history/">History</Link>
         </nav>
       </header>
 
       <section style={styles.hero}>
         <h1 style={styles.h1}>
-          El KYC del futuro no pide documentos.
+          The KYC of the future does not ask for documents.
           <br />
-          <span style={styles.h1Accent}>Pregunta a la red.</span>
+          <span style={styles.h1Accent}>Ask the network.</span>
         </h1>
         <p style={styles.subtitle}>
-          Verificación de identidad en menos de 2 segundos con datos que la red telecom ya tiene.
-          Sin documentos, sin fricción.
+          Identity verification in less than 2 seconds with data that the telecom network already has.
+          No documents, no friction.
         </p>
         <div style={styles.ctas}>
           <Link href="/dashboard/" style={styles.primaryCta}>
-            Probar demo
+            Try demo
           </Link>
           <a href="#how" style={styles.secondaryCta}>
-            Cómo funciona
+            How it works
           </a>
         </div>
       </section>
 
       <section id="how" style={styles.section}>
-        <h2 style={styles.h2}>Cómo funciona</h2>
+        <h2 style={styles.h2}>How it works</h2>
         <div style={styles.cards}>
           <div style={styles.card}>
-            <strong>1. Número + datos</strong>
-            <p>El usuario introduce su teléfono y nombre/fecha de nacimiento.</p>
+            <strong>1. NNumber + Details</strong>
+            <p>The user enters their phone number and name/date of birth.</p>
           </div>
           <div style={styles.card}>
-            <strong>2. Tres comprobaciones</strong>
-            <p>Number Verification, SIM Swap y KYC Match en paralelo vía CAMARA.</p>
+            <strong>2. Three Checks</strong>
+            <p>Number Verification, SIM Swap and KYC Match in parallel via CAMARA.</p>
           </div>
           <div style={styles.card}>
             <strong>3. Trust Score</strong>
-            <p>Allow/Deny y puntuación 0–100 en segundos.</p>
+            <p>Allow/Deny and score 0–100 in seconds.</p>
           </div>
         </div>
       </section>
 
       <footer style={styles.footer}>
-        <p>TrustGate — Open Gateway Hackathon 2026</p>
+        <p>TrustGate — Open Gateway Hackathon 2026 (Team 12)</p>
       </footer>
     </main>
   );
