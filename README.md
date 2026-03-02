@@ -135,9 +135,9 @@ Misma app = mismo dominio; las rutas de API son relativas. **Cada petición trat
 
 ### Flujo de verificación
 
-1. **Iniciar** — `POST /api/v1/verifications/initiate` con subject, redirect_uri, etc. Respuesta: `authorization_url` y `verification_request_id` (state).
-2. **Redirect** — El usuario abre `authorization_url` y completa el flujo en el operador. Vuelve a tu `redirect_uri` con `state` y `verification_id` en la URL.
-3. **Resultado** — El callback interno escribe **un** registro de verificación completada. Para obtenerlo: `GET` por `state` (verification_request_id) o por `verification_id`.
+1. **Iniciar** — `POST /api/v1/verifications/initiate` con subject, redirect_uri, etc. Respuesta: `authorization_url` y `verification_id` (usado como OAuth state).
+2. **Redirect** — El usuario abre `authorization_url` y completa el flujo en el operador. Vuelve a tu `redirect_uri` con `state` y `verification_id` en la URL (state = verification_id).
+3. **Resultado** — El callback actualiza el mismo registro en Firestore (status: pending → approved/denied). Para obtenerlo: `GET` por `state` (verification_id) o por `verification_id`.
 
 ### POST /api/v1/verifications/initiate
 
@@ -153,11 +153,11 @@ Inicia **una** verificación: guarda la petición y devuelve el enlace de autori
 }
 ```
 
-**Respuesta:** `authorization_url`, `verification_request_id` (usar como `state` al consultar), `message`. Sin listados ni límites; una petición = un proceso de verificación.
+**Respuesta:** `authorization_url`, `verification_id` (usado como state en el redirect y al consultar), `message`. Sin listados ni límites; una petición = un proceso de verificación.
 
-### GET /api/v1/completed-verifications?state=&lt;verification_request_id&gt;
+### GET /api/v1/completed-verifications?state=&lt;verification_id&gt;
 
-Devuelve **la** verificación completada para esa petición. **Requerido:** query `state` (el `verification_request_id` devuelto en initiate). Respuesta: un único objeto de verificación (campos completos). Sin `state` responde 400.
+Devuelve **la** verificación para esa petición. **Requerido:** query `state` (el `verification_id` devuelto en initiate). Respuesta: un único objeto de verificación (campos completos). Sin `state` responde 400.
 
 ### GET /api/v1/completed-verifications/:id
 

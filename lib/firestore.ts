@@ -19,21 +19,32 @@ function getFirestore() {
   return firestoreInstance ?? admin.firestore();
 }
 
+/**
+ * Single collection for all verification lifecycle states.
+ * Document ID = verification_id (same as state from initiate).
+ * Created at initiate with status "pending"; updated in callback to "approved" or "denied".
+ */
 export const VERIFICATIONS_COLLECTION = "verifications";
 
 export interface VerificationRecord {
   verification_id: string;
-  request_id: string;
   subject: { phone_number: string; country: string };
   claims: Record<string, string>;
   checks: string[];
   policy: { min_trust_score: number; sim_swap_max_age_hours?: number };
   status: "pending" | "approved" | "denied";
+  /** Set at initiate; used by callback for redirect. */
+  redirect_uri?: string;
+  /** Set in callback when checks complete. */
   trust_score?: number;
   decision?: "allow" | "deny";
   check_results?: Array<{ name: string; status: string; detail?: Record<string, unknown> }>;
   expires_at: string;
   created_at: string;
+  /** Set in callback when status moves to approved/denied. */
+  completed_at?: string;
+  /** Set in callback on failure (e.g. NAC error). */
+  error?: string;
   metadata?: Record<string, string>;
 }
 
@@ -48,65 +59,20 @@ export async function getVerification(verificationId: string): Promise<Verificat
   return doc.exists ? (doc.data() as VerificationRecord) : null;
 }
 
-// ---------------------------------------------------------------------------
-// Number verification requests (redirect flow: state = request ID)
-// Stores the full verification request so callback can run SIM swap + KYC after auth.
-// ---------------------------------------------------------------------------
-
-export const NUMBER_VERIFICATION_REQUESTS_COLLECTION = "number_verification_requests";
-
-export interface NumberVerificationRequestRecord {
-  state: string;
-  phone_number: string;
-  country: string;
-  redirect_uri?: string;
-  status: "pending" | "completed" | "failed";
-  verified?: boolean;
-  created_at: string;
-  completed_at?: string;
-  error?: string;
-  /** Set in callback when the full verification record is created */
-  verification_id?: string;
-  subject: { phone_number: string; country: string };
-  claims: Record<string, string>;
-  checks: string[];
-  policy: { min_trust_score: number; sim_swap_max_age_hours?: number };
-  metadata?: Record<string, string>;
-}
-
-export async function saveNumberVerificationRequest(
-  data: NumberVerificationRequestRecord
-): Promise<void> {
-  const db = getFirestore();
-  await db
-    .collection(NUMBER_VERIFICATION_REQUESTS_COLLECTION)
-    .doc(data.state)
-    .set(data);
-}
-
-export async function getNumberVerificationRequest(
-  state: string
-): Promise<NumberVerificationRequestRecord | null> {
-  const db = getFirestore();
-  const doc = await db
-    .collection(NUMBER_VERIFICATION_REQUESTS_COLLECTION)
-    .doc(state)
-    .get();
-  return doc.exists ? (doc.data() as NumberVerificationRequestRecord) : null;
-}
-
-export async function updateNumberVerificationRequest(
-  state: string,
+export async function updateVerification(
+  verificationId: string,
   update: Partial<
     Pick<
-      NumberVerificationRequestRecord,
-      "status" | "verified" | "completed_at" | "error" | "verification_id"
+      VerificationRecord,
+      | "status"
+      | "trust_score"
+      | "decision"
+      | "check_results"
+      | "completed_at"
+      | "error"
     >
   >
 ): Promise<void> {
   const db = getFirestore();
-  await db
-    .collection(NUMBER_VERIFICATION_REQUESTS_COLLECTION)
-    .doc(state)
-    .update(update);
+  await db.collection(VERIFICATIONS_COLLECTION).doc(verificationId).update(update);
 }

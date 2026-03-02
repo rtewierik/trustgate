@@ -2,11 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getRequestOrigin } from "@/lib/get-request-origin";
 import { createNumberVerificationAuthLink } from "@/lib/nac";
-import {
-  saveNumberVerificationRequest,
-  type NumberVerificationRequestRecord,
-} from "@/lib/firestore";
-import { randomUUID } from "node:crypto";
+import { saveVerification, type VerificationRecord } from "@/lib/firestore";
+import { v4 as uuidv4 } from "uuid";
 
 const InitiateSchema = z.object({
   subject: z.object({
@@ -35,9 +32,9 @@ const InitiateSchema = z.object({
 
 /**
  * POST /v1/verifications/initiate
- * Initialize verification: store the request and return an auth link.
- * After the user completes the redirect, the callback runs verification and writes
- * the result to the completed-verifications table. Use GET /v1/completed-verifications?state=<id> to fetch the result.
+ * Initialize verification: create a pending verification in Firestore and return an auth link.
+ * After the user completes the redirect, the callback runs verification and updates the same
+ * document (status: approved/denied). Use GET /v1/completed-verifications?state=<id> to fetch the result.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -59,26 +56,27 @@ export async function POST(request: NextRequest) {
       metadata,
     } = parsed.data;
 
-    const state = `nv_${Date.now().toString(36)}_${randomUUID().slice(0, 8)}`;
+    const verificationId = uuidv4();
     const phoneNumber = subject.phone_number;
     const normalizedPhone = phoneNumber.startsWith("+")
       ? phoneNumber
       : `+${phoneNumber}`;
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000);
 
-    const record: NumberVerificationRequestRecord = {
-      state,
-      phone_number: normalizedPhone,
-      country: subject.country,
-      redirect_uri,
-      status: "pending",
-      created_at: new Date().toISOString(),
+    const record: VerificationRecord = {
+      verification_id: verificationId,
       subject: { phone_number: normalizedPhone, country: subject.country },
       claims,
       checks,
       policy,
+      status: "pending",
+      redirect_uri,
+      expires_at: expiresAt.toISOString(),
+      created_at: now.toISOString(),
       metadata,
     };
-    await saveNumberVerificationRequest(record);
+    await saveVerification(record);
 
     // Dynamic callback base. Prefer forwarded headers (Cloud Run/App Hosting use X-Forwarded-Host)
     const baseUrl =
@@ -92,14 +90,14 @@ export async function POST(request: NextRequest) {
     const authorization_url = await createNumberVerificationAuthLink(
       normalizedPhone,
       callbackUrl,
-      state
+      verificationId
     );
 
     return NextResponse.json({
       authorization_url,
-      verification_request_id: state,
+      verification_id: verificationId,
       message:
-        "Redirect the end user to authorization_url. After they complete the flow, the callback will run verification and write the result. Use GET /v1/completed-verifications?state=<verification_request_id> to fetch the completed verification.",
+        "Redirect the end user to authorization_url. After they complete the flow, the callback will run verification and write the result. Use GET /v1/completed-verifications?state=<verification_id> to fetch the completed verification.",
     });
   } catch (err) {
     console.error("Verification initiate error:", err);

@@ -21,7 +21,7 @@ interface VerificationResult extends VerificationResultCardData {
 
 interface InitiateResult {
   authorization_url: string;
-  verification_request_id: string;
+  verification_id: string;
   message: string;
 }
 
@@ -132,7 +132,7 @@ function DashboardContent() {
       POPUP_SPEC
     );
     popupRef.current = popup;
-    pendingStateRef.current = initiateResult.verification_request_id;
+    pendingStateRef.current = initiateResult.verification_id;
     const interval = setInterval(() => {
       if (!popupRef.current?.closed) return;
       clearInterval(interval);
@@ -249,7 +249,7 @@ function DashboardContent() {
                 >
                   Abrir verificación en ventana emergente
                 </button>
-                <p style={styles.muted}>Request ID: {initiateResult.verification_request_id}</p>
+                <p style={styles.muted}>Verification ID: {initiateResult.verification_id}</p>
               </div>
             )}
           </>

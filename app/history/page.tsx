@@ -15,8 +15,7 @@ interface VerificationResult extends VerificationResultCardData {
 }
 
 export default function HistoryPage() {
-  const [queryBy, setQueryBy] = useState<"id" | "state">("id");
-  const [value, setValue] = useState("");
+  const [verificationId, setVerificationId] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [verification, setVerification] = useState<VerificationResult | null>(null);
@@ -25,14 +24,11 @@ export default function HistoryPage() {
     e.preventDefault();
     setError(null);
     setVerification(null);
-    if (!value.trim()) return;
+    const id = verificationId.trim();
+    if (!id) return;
     setLoading(true);
     try {
-      const url =
-        queryBy === "id"
-          ? `${API_BASE}/api/v1/completed-verifications/${encodeURIComponent(value.trim())}`
-          : `${API_BASE}/api/v1/completed-verifications?state=${encodeURIComponent(value.trim())}`;
-      const res = await fetch(url);
+      const res = await fetch(`${API_BASE}/api/v1/completed-verifications/${encodeURIComponent(id)}`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || data.message || "Not found");
       setVerification(data);
@@ -56,28 +52,17 @@ export default function HistoryPage() {
       <div style={styles.content}>
         <h1 style={styles.h1}>Consultar verificación</h1>
         <p style={styles.subtitle}>
-          Obtén una verificación completada por <em>verification_id</em> o por <em>state</em> (verification_request_id).
+          Introduce el <em>verification_id</em> devuelto al iniciar una verificación para ver el resultado.
         </p>
 
         <form onSubmit={handleSubmit} style={styles.form}>
           <div style={styles.row}>
-            <label style={styles.label}>Buscar por</label>
-            <select
-              value={queryBy}
-              onChange={(e) => setQueryBy(e.target.value as "id" | "state")}
-              style={styles.input}
-            >
-              <option value="id">verification_id</option>
-              <option value="state">state (verification_request_id)</option>
-            </select>
-          </div>
-          <div style={styles.row}>
-            <label style={styles.label}>{queryBy === "id" ? "Verification ID" : "State"}</label>
+            <label style={styles.label}>Verification ID</label>
             <input
               type="text"
-              value={value}
-              onChange={(e) => setValue(e.target.value)}
-              placeholder={queryBy === "id" ? "ver_xxx" : "nv_xxx"}
+              value={verificationId}
+              onChange={(e) => setVerificationId(e.target.value)}
+              placeholder="ej. 550e8400-e29b-41d4-a716-446655440000"
               style={styles.input}
             />
           </div>
