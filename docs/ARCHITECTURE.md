@@ -60,26 +60,25 @@ sequenceDiagram
   participant N as NAC APIs (SIM Swap, KYC)
 
   C->>T: POST /v1/verifications/initiate (subject, redirect_uri, claims, policy)
-  T->>F: Save number_verification_requests[state] (pending)
+  T->>F: Save verifications[state] (status: pending)
   T->>O: createAuthorizationLink(phone, callbackUrl, state)
   O-->>T: authorization_url
-  T-->>C: authorization_url, verification_request_id (state)
+  T-->>C: authorization_url, verification_id (used as OAuth state)
 
   C->>C: Redirect user to authorization_url
   C->>O: User completes operator flow
   O->>T: GET .../callback?code=...&state=...
-  T->>F: Load request by state
+  T->>F: Load verifications[state]
   T->>O: device.verifyNumber(code, state)
   O-->>T: verified
   T->>N: simSwap(phone), kycMatch(phone, claims)
   N-->>T: swapped, match_level
   T->>T: computeTrustScore(numVer, simSwap, kyc) → decision
-  T->>F: Save verifications[verification_id]
-  T->>F: Update request (completed, verification_id)
+  T->>F: Update verifications[state] (status: approved/denied, trust_score, check_results)
   T-->>C: Redirect to redirect_uri?state=...&verification_id=...&status=...
 
   C->>T: GET /v1/completed-verifications?state=... (or /:id)
-  T->>F: Get verification by state or id
+  T->>F: Get verification by id (state = verification_id)
   F-->>T: verification
   T-->>C: Single verification object
 ```
@@ -88,44 +87,44 @@ sequenceDiagram
 
 ## Data model
 
+A single **verifications** collection holds the full lifecycle. Document ID = `verification_id` = `state` (the value returned from initiate).
+
 ```mermaid
 erDiagram
-  number_verification_requests {
-    string state PK "verification_request_id"
-    string phone_number
-    string country
-    string redirect_uri
-    string status "pending | completed | failed"
-    boolean verified
-    string verification_id FK "set in callback"
-    object subject
-    object claims
-    object checks
-    object policy
-    string created_at
-    string completed_at
-  }
-
   verifications {
-    string verification_id PK
-    string request_id
+    string verification_id PK "doc ID = state"
     object subject
     object claims
     array checks
     object policy
-    string status "approved | denied"
-    number trust_score
+    string status "pending | approved | denied"
+    string redirect_uri "set at initiate"
+    number trust_score "set in callback"
     string decision "allow | deny"
     array check_results
-    string expires_at
+    string expires_at "TTL; null/absent when completed"
     string created_at
+    string completed_at "set in callback"
+    string error "set in callback on failure"
   }
-
-  number_verification_requests ||--o| verifications : "verification_id"
 ```
 
-- **number_verification_requests:** One document per initiated verification (key = `state`). Stores full request so the callback can run SIM swap + KYC after number verification. Updated to `completed` / `failed` and linked to `verification_id` when the callback finishes.
-- **verifications:** One document per completed verification (key = `verification_id`). Written only by the callback. Queried by `state` (via request) or by `verification_id`.
+- **verifications:** One document per verification. Created at **initiate** with `status: "pending"` and `redirect_uri`. The **callback** loads by `state` (doc ID), runs number verification + SIM swap + KYC, then updates the same document to `status: "approved"` or `"denied"` with `trust_score`, `decision`, `check_results`, and `completed_at`. Queried by `verification_id` (same as state).
+
+### Data retention (TTL)
+
+Firestore [TTL policies](https://firebase.google.com/docs/firestore/ttl) auto-delete documents when a designated timestamp field is in the past. TrustGate uses this so **pending** verifications expire; **completed** ones are kept indefinitely.
+
+- **Pending:** At initiate, `expires_at` is set to a Firestore Timestamp (now + 5 minutes). Documents with `expires_at` in the past are deleted by Firestore (typically within 24 hours).
+- **Completed:** When the callback sets `status` to `approved` or `denied`, it sets `expires_at` to `null`. Per Firestore TTL docs, absent or `null` disables expiration for that document, so completed verifications never expire.
+
+**Enable TTL** (once per database) via Google Cloud Console (Firestore → Time-to-live) or:
+
+```bash
+gcloud firestore fields ttls update expires_at --collection-group=verifications --enable-ttl
+```
+
+The `expires_at` field is stored as a Firestore **Timestamp** in the database; the app uses ISO strings in code and converts at read/write.
 
 ---
 
@@ -176,8 +175,8 @@ flowchart LR
 | Layer | Components |
 |-------|------------|
 | **API** | `POST /v1/verifications/initiate`, `GET .../number-verification/callback`, `GET /v1/completed-verifications?state=`, `GET /v1/completed-verifications/:id` |
-| **Lib** | `nac` (Nokia SDK: number verification, SIM swap, KYC), `trust-score` (score + decision), `firestore` (requests + verifications) |
-| **Storage** | Firestore: `number_verification_requests`, `verifications` |
+| **Lib** | `nac` (Nokia SDK: number verification, SIM swap, KYC), `trust-score` (score + decision), `firestore` (verifications: save, get, update) |
+| **Storage** | Firestore: `verifications` (single collection; status pending → approved/denied in callback) |
 | **External** | Nokia Network as Code (RapidAPI): authorization + number verification, SIM swap, KYC match |
 | **Hosting** | Firebase App Hosting (Next.js on Cloud Run), Firestore |
 
@@ -187,7 +186,7 @@ flowchart LR
 
 1. **High-level diagram** — Show client, TrustGate, Firebase, and NAC; emphasize “one app, one verification at a time, query by ID.”
 2. **Sequence diagram** — Walk through: initiate → auth link → user at operator → callback runs all three CAMARA checks → trust score → one saved verification → client fetches by state or id.
-3. **Data model** — Explain request table (by state) vs completed verification table (by verification_id); no list, only single-verification lookup.
+3. **Data model** — Single verifications collection; document ID = verification_id = state; status moves from pending to approved/denied in the callback; no list, only single-verification lookup.
 4. **Trust score** — Show the three checks and how the policy drives allow/deny.
 
 Mermaid renders in GitHub, GitLab, and many doc tools; you can also export to PNG/SVG via [Mermaid Live](https://mermaid.live) or your IDE for slides.

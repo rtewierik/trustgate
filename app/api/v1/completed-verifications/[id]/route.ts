@@ -17,5 +17,8 @@ export async function GET(
       { status: 404 }
     );
   }
-  return NextResponse.json(verification);
+  return NextResponse.json({
+    ...verification,
+    ...(verification.error != null && { error_message: verification.error }),
+  });
 }
