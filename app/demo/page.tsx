@@ -52,6 +52,13 @@ function DemoContent() {
   const popupRef = useRef<Window | null>(null);
   const pendingStateRef = useRef<string | null>(null);
   const popupCheckIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const nextStepRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (initiateResult && nextStepRef.current) {
+      nextStepRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  }, [initiateResult]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -237,7 +244,7 @@ function DemoContent() {
             {error && <div style={s.error}>{error}</div>}
 
             {initiateResult && (
-              <div style={s.result}>
+              <div ref={nextStepRef} style={s.result}>
                 <h2 style={s.resultTitle}>Siguiente paso: verificación en red</h2>
                 <p style={{ marginBottom: "1rem", color: "var(--muted)" }}>
                   Se abrirá una ventana emergente para que el usuario complete la verificación con el operador. Al cerrarla, esta página se actualizará si la verificación fue exitosa.

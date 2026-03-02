@@ -1,6 +1,26 @@
+"use client";
+
+import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 
 export default function LandingPage() {
+  const [howExpanded, setHowExpanded] = useState(false);
+  const howSectionRef = useRef<HTMLElement | null>(null);
+
+  // Expand and scroll into view when navigating to #how
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.location.hash === "#how") {
+      setHowExpanded(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (howExpanded && howSectionRef.current) {
+      howSectionRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [howExpanded]);
+
   return (
     <main style={styles.main}>
       <header style={styles.header}>
@@ -25,31 +45,41 @@ export default function LandingPage() {
           <Link href="/demo/" className="hero-cta" style={styles.primaryCta}>
             Probar demo
           </Link>
-          <a href="#how" className="hero-scroll-hint" style={styles.scrollHint}>
+          <a href="#how" className="hero-scroll-hint" style={styles.scrollHint} onClick={(e) => { e.preventDefault(); setHowExpanded(true); }}>
             Cómo funciona ↓
           </a>
         </div>
       </section>
 
-      <section id="how" style={styles.section}>
-        <h2 style={styles.h2}>Cómo funciona</h2>
-        <div style={styles.cards}>
-          <div style={styles.card}>
-            <span style={styles.cardNum}>1</span>
-            <strong>Número + datos</strong>
-            <p>El usuario introduce su teléfono y nombre/fecha de nacimiento.</p>
-          </div>
-          <div style={styles.card}>
-            <span style={styles.cardNum}>2</span>
-            <strong>Tres comprobaciones</strong>
-            <p>Number Verification, SIM Swap y KYC Match en paralelo vía CAMARA.</p>
-          </div>
-          <div style={styles.card}>
-            <span style={styles.cardNum}>3</span>
-            <strong>Trust Score</strong>
-            <p>Allow/Deny y puntuación 0–100 en segundos.</p>
-          </div>
-        </div>
+      <section
+        id="how"
+        ref={howSectionRef}
+        style={howExpanded ? styles.section : { ...styles.section, display: "none" }}
+      >
+        {howExpanded && (
+          <>
+            <h2 style={styles.sectionTitle}>Cómo funciona</h2>
+            <div style={styles.expandableCard}>
+              <div style={styles.cards}>
+              <div style={styles.card}>
+                <span style={styles.cardNum}>1</span>
+                <strong>Número + datos</strong>
+                <p>El usuario introduce su teléfono y nombre/fecha de nacimiento.</p>
+              </div>
+              <div style={styles.card}>
+                <span style={styles.cardNum}>2</span>
+                <strong>Tres comprobaciones</strong>
+                <p>Number Verification, SIM Swap y KYC Match en paralelo vía CAMARA.</p>
+              </div>
+              <div style={styles.card}>
+                <span style={styles.cardNum}>3</span>
+                <strong>Trust Score</strong>
+                <p>Allow/Deny y puntuación 0–100 en segundos.</p>
+              </div>
+              </div>
+            </div>
+          </>
+        )}
       </section>
 
       <footer style={styles.footer}>
@@ -133,19 +163,37 @@ const styles: Record<string, React.CSSProperties> = {
     borderTop: "1px solid var(--border)",
     background: "var(--surface)",
   },
-  h2: {
+  sectionTitle: {
     textAlign: "center",
-    marginBottom: "2.5rem",
+    marginBottom: "1.5rem",
     fontSize: "1.5rem",
     fontWeight: 600,
     color: "var(--text)",
+  },
+  expandableCard: {
+    display: "block",
+    width: "100%",
+    maxWidth: "920px",
+    margin: "0 auto",
+    padding: "1.25rem 1.5rem",
+    border: "1px solid var(--border)",
+    borderRadius: "16px",
+    background: "var(--bg)",
+    color: "var(--text)",
+    textAlign: "center",
+    cursor: "pointer",
+  },
+  expandableCardTitle: {
+    fontSize: "1.25rem",
+    fontWeight: 600,
+    display: "block",
+    textAlign: "center",
   },
   cards: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
     gap: "1.5rem",
-    maxWidth: "920px",
-    margin: "0 auto",
+    marginTop: "1.5rem",
   },
   card: {
     position: "relative",
