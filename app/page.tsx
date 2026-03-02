@@ -56,7 +56,6 @@ export default function LandingPage() {
   );
 }
 
-// TODO: Migrate to Tailwind CSS?
 const styles: Record<string, React.CSSProperties> = {
   main: { minHeight: "100vh", display: "flex", flexDirection: "column" },
   header: {

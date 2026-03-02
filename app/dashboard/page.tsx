@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
+const API_BASE = typeof window !== "undefined" ? "" : process.env.NEXT_PUBLIC_API_URL || "";
 
 interface VerificationResult {
   verification_id: string;
@@ -30,7 +30,7 @@ export default function DashboardPage() {
     setResult(null);
     setLoading(true);
     try {
-      const res = await fetch(`${API_URL}/api/v1/verifications`, {
+      const res = await fetch(`${API_BASE}/api/v1/verifications`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

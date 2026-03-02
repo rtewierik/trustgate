@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
+const API_BASE = typeof window !== "undefined" ? "" : process.env.NEXT_PUBLIC_API_URL || "";
 
 interface VerificationSummary {
   verification_id: string;
@@ -23,7 +23,7 @@ export default function HistoryPage() {
     let cancelled = false;
     async function fetchList() {
       try {
-        const res = await fetch(`${API_URL}/api/v1/verifications?limit=50`);
+        const res = await fetch(`${API_BASE}/api/v1/verifications?limit=50`);
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || "Failed to load");
         if (!cancelled) setList(data.verifications || []);

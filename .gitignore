@@ -6,9 +6,6 @@ node_modules
 .next
 out
 dist
-apps/api/.next
-apps/web/.next
-apps/web/out
 
 # Environment
 .env
