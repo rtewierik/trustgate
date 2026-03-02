@@ -16,7 +16,6 @@ interface VerificationResult extends VerificationResultCardData {
   decision?: "allow" | "deny";
   check_results?: Array<{ name: string; status: string; detail?: Record<string, unknown> }>;
   checks?: Array<{ name: string; status: string; detail?: Record<string, unknown> }>;
-  expires_at: string;
 }
 
 interface InitiateResult {

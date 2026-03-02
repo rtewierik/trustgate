@@ -102,7 +102,7 @@ erDiagram
     number trust_score "set in callback"
     string decision "allow | deny"
     array check_results
-    string expires_at
+    string expires_at "TTL; null/absent when completed"
     string created_at
     string completed_at "set in callback"
     string error "set in callback on failure"
@@ -110,6 +110,21 @@ erDiagram
 ```
 
 - **verifications:** One document per verification. Created at **initiate** with `status: "pending"` and `redirect_uri`. The **callback** loads by `state` (doc ID), runs number verification + SIM swap + KYC, then updates the same document to `status: "approved"` or `"denied"` with `trust_score`, `decision`, `check_results`, and `completed_at`. Queried by `verification_id` (same as state).
+
+### Data retention (TTL)
+
+Firestore [TTL policies](https://firebase.google.com/docs/firestore/ttl) auto-delete documents when a designated timestamp field is in the past. TrustGate uses this so **pending** verifications expire; **completed** ones are kept indefinitely.
+
+- **Pending:** At initiate, `expires_at` is set to a Firestore Timestamp (now + 5 minutes). Documents with `expires_at` in the past are deleted by Firestore (typically within 24 hours).
+- **Completed:** When the callback sets `status` to `approved` or `denied`, it sets `expires_at` to `null`. Per Firestore TTL docs, absent or `null` disables expiration for that document, so completed verifications never expire.
+
+**Enable TTL** (once per database) via Google Cloud Console (Firestore → Time-to-live) or:
+
+```bash
+gcloud firestore fields ttls update expires_at --collection-group=verifications --enable-ttl
+```
+
+The `expires_at` field is stored as a Firestore **Timestamp** in the database; the app uses ISO strings in code and converts at read/write.
 
 ---
 

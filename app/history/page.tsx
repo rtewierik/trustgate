@@ -11,7 +11,6 @@ interface VerificationResult extends VerificationResultCardData {
   status: string;
   subject: { phone_number: string; country: string };
   created_at: string;
-  expires_at: string;
 }
 
 export default function HistoryPage() {

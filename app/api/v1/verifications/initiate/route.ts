@@ -2,7 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getRequestOrigin } from "@/lib/get-request-origin";
 import { createNumberVerificationAuthLink } from "@/lib/nac";
-import { saveVerification, type VerificationRecord } from "@/lib/firestore";
+import {
+  saveVerification,
+  type VerificationRecord,
+  PENDING_VERIFICATION_TTL_MINUTES,
+} from "@/lib/firestore";
 import { v4 as uuidv4 } from "uuid";
 
 const InitiateSchema = z.object({
@@ -62,7 +66,9 @@ export async function POST(request: NextRequest) {
       ? phoneNumber
       : `+${phoneNumber}`;
     const now = new Date();
-    const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+    const expiresAt = new Date(
+      now.getTime() + PENDING_VERIFICATION_TTL_MINUTES * 60 * 1000
+    );
 
     const record: VerificationRecord = {
       verification_id: verificationId,

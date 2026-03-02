@@ -10,7 +10,8 @@ export interface VerificationResultCardData {
   checks?: Array<{ name: string; status: string; detail?: Record<string, unknown> }>;
   subject?: { phone_number: string; country: string };
   created_at?: string;
-  expires_at?: string;
+  /** Present for pending; absent/null for completed (persistent). */
+  expires_at?: string | null;
   /** Shown on failure when no full verification (e.g. error from provider) */
   error_message?: string;
 }

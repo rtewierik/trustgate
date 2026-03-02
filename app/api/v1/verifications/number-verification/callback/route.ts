@@ -83,6 +83,7 @@ export async function GET(request: NextRequest) {
       decision,
       check_results: checkResults,
       completed_at: now.toISOString(),
+      expires_at: null,
       ...(numVer.detail && { error: numVer.detail }),
     });
 
@@ -108,6 +109,7 @@ export async function GET(request: NextRequest) {
     await updateVerification(state, {
       status: "denied",
       completed_at: new Date().toISOString(),
+      expires_at: null,
       error: message,
     });
 
