@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
+import { AppHeader } from "@/components/AppHeader";
 import { VerificationResultCard, type VerificationResultCardData } from "@/components/VerificationResultCard";
-
-const API_BASE = typeof window !== "undefined" ? "" : process.env.NEXT_PUBLIC_API_URL || "";
+import { API_BASE } from "@/lib/api";
+import { pageLayoutStyles } from "@/lib/layoutStyles";
 
 interface VerificationResult extends VerificationResultCardData {
   verification_id: string;
@@ -38,39 +38,33 @@ export default function HistoryPage() {
     }
   }
 
+  const s = pageLayoutStyles;
   return (
-    <main style={styles.main}>
-      <header style={styles.header}>
-        <Link href="/" style={styles.logo}>TrustGate</Link>
-        <nav style={styles.nav}>
-          <Link href="/dashboard/">Dashboard</Link>
-          <Link href="/history/">Historial</Link>
-        </nav>
-      </header>
-
-      <div style={styles.content}>
-        <h1 style={styles.h1}>Consultar verificación</h1>
-        <p style={styles.subtitle}>
+    <main style={s.main}>
+      <AppHeader />
+      <div style={s.content}>
+        <h1 style={s.h1}>Consultar verificación</h1>
+        <p style={s.subtitle}>
           Introduce el <em>verification_id</em> devuelto al iniciar una verificación para ver el resultado.
         </p>
 
-        <form onSubmit={handleSubmit} style={styles.form}>
-          <div style={styles.row}>
-            <label style={styles.label}>Verification ID</label>
+        <form onSubmit={handleSubmit} style={s.form}>
+          <div style={s.row}>
+            <label style={s.label}>Verification ID</label>
             <input
               type="text"
               value={verificationId}
               onChange={(e) => setVerificationId(e.target.value)}
               placeholder="ej. 550e8400-e29b-41d4-a716-446655440000"
-              style={styles.input}
+              style={s.input}
             />
           </div>
-          <button type="submit" disabled={loading} style={styles.button}>
+          <button type="submit" disabled={loading} style={s.button}>
             {loading ? "Buscando…" : "Buscar"}
           </button>
         </form>
 
-        {error && <div style={styles.error}>{error}</div>}
+        {error && <div style={s.error}>{error}</div>}
 
         {verification && (
           <div style={{ marginTop: "2rem" }}>
@@ -85,58 +79,3 @@ export default function HistoryPage() {
     </main>
   );
 }
-
-const styles: Record<string, React.CSSProperties> = {
-  main: { minHeight: "100vh", display: "flex", flexDirection: "column" },
-  header: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: "1rem 2rem",
-    borderBottom: "1px solid var(--border)",
-  },
-  logo: { fontSize: "1.25rem", fontWeight: 700, color: "var(--accent)" },
-  nav: { display: "flex", gap: "1.5rem" },
-  content: { flex: 1, padding: "2rem", maxWidth: "560px", margin: "0 auto", width: "100%" },
-  h1: { marginBottom: "0.5rem", fontSize: "1.5rem" },
-  subtitle: { color: "var(--muted)", marginBottom: "1.5rem", fontSize: "0.9rem" },
-  form: { display: "flex", flexDirection: "column", gap: "1rem" },
-  row: { display: "flex", flexDirection: "column", gap: "0.25rem" },
-  label: { fontSize: "0.875rem", color: "var(--muted)" },
-  input: {
-    padding: "0.5rem 0.75rem",
-    borderRadius: "8px",
-    border: "1px solid var(--border)",
-    background: "var(--surface)",
-    color: "var(--text)",
-  },
-  button: {
-    marginTop: "0.5rem",
-    padding: "0.75rem 1.5rem",
-    background: "var(--accent)",
-    color: "var(--bg)",
-    border: "none",
-    borderRadius: "8px",
-    fontWeight: 600,
-  },
-  error: {
-    marginTop: "1rem",
-    padding: "1rem",
-    background: "rgba(255,71,87,0.15)",
-    border: "1px solid var(--danger)",
-    borderRadius: "8px",
-    color: "var(--danger)",
-  },
-  result: {
-    marginTop: "2rem",
-    padding: "1.5rem",
-    background: "var(--surface)",
-    border: "1px solid var(--border)",
-    borderRadius: "12px",
-  },
-  resultTitle: { marginBottom: "0.5rem" },
-  trustScore: { marginBottom: "0.25rem" },
-  status: { marginBottom: "0.5rem", fontSize: "0.9rem" },
-  checks: { listStyle: "none", fontSize: "0.875rem", color: "var(--muted)" },
-  muted: { marginTop: "0.25rem", fontSize: "0.875rem", color: "var(--muted)" },
-};

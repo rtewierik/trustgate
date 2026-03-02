@@ -2,8 +2,7 @@
 
 import { useState, useEffect, useRef, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-
-const API_BASE = typeof window !== "undefined" ? "" : process.env.NEXT_PUBLIC_API_URL || "";
+import { API_BASE } from "@/lib/api";
 
 const styles: Record<string, React.CSSProperties> = {
   main: { minHeight: "100vh", display: "flex", flexDirection: "column" },
@@ -89,10 +88,10 @@ function VerificationPopupContent() {
   useEffect(() => {
     if (typeof window === "undefined" || !state) return;
 
-    // If opened directly (no opener), redirect to dashboard with state so result is shown there
+    // If opened directly (no opener), redirect to demo with state so result is shown there
     if (!window.opener) {
       const params = new URLSearchParams(searchParams.toString());
-      router.replace(`/dashboard?${params.toString()}`);
+      router.replace(`/demo?${params.toString()}`);
       return;
     }
 

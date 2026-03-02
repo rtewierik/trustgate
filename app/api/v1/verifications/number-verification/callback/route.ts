@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
       searchParams.get("error_description") ??
       "Redirect must include code and state query parameters.";
     const finalOrigin = getRequestOrigin(request);
-    const redirectUrl = `${finalOrigin}/dashboard/verification-popup?error_message=${encodeURIComponent(message)}`;
+    const redirectUrl = `${finalOrigin}/demo/verification-popup?error_message=${encodeURIComponent(message)}`;
     return NextResponse.redirect(redirectUrl);
   }
 
@@ -33,14 +33,14 @@ export async function GET(request: NextRequest) {
   if (!record) {
     const message = "The request ID (state) is invalid or expired.";
     const finalOrigin = getRequestOrigin(request);
-    const redirectUrl = `${finalOrigin}/dashboard/verification-popup?error_message=${encodeURIComponent(message)}&state=${encodeURIComponent(state)}`;
+    const redirectUrl = `${finalOrigin}/demo/verification-popup?error_message=${encodeURIComponent(message)}&state=${encodeURIComponent(state)}`;
     return NextResponse.redirect(redirectUrl);
   }
 
   if (record.status !== "pending") {
     const finalOrigin = getRequestOrigin(request);
     const redirectUrl = new URL(
-      record.redirect_uri ?? `${finalOrigin}/dashboard`
+      record.redirect_uri ?? `${finalOrigin}/demo`
     );
     redirectUrl.searchParams.set("number_verification", "already_completed");
     redirectUrl.searchParams.set("state", state);
@@ -89,7 +89,7 @@ export async function GET(request: NextRequest) {
 
     const finalOrigin = getRequestOrigin(request);
     const redirectUrl = new URL(
-      record.redirect_uri ?? `${finalOrigin}/dashboard`
+      record.redirect_uri ?? `${finalOrigin}/demo`
     );
     redirectUrl.searchParams.set(
       "number_verification",
@@ -115,7 +115,7 @@ export async function GET(request: NextRequest) {
 
     const finalOrigin = getRequestOrigin(request);
     const redirectUrl = new URL(
-      record.redirect_uri ?? `${finalOrigin}/dashboard/verification-popup`
+      record.redirect_uri ?? `${finalOrigin}/demo/verification-popup`
     );
     redirectUrl.searchParams.set("state", state);
     redirectUrl.searchParams.set("error_message", message);

@@ -6,7 +6,6 @@ export default function LandingPage() {
       <header style={styles.header}>
         <span style={styles.logo}>TrustGate</span>
         <nav style={styles.nav}>
-          <Link href="/dashboard/">Dashboard</Link>
           <Link href="/history/">Historial</Link>
         </nav>
       </header>
@@ -23,7 +22,7 @@ export default function LandingPage() {
             Verificación de identidad en menos de 2 segundos con datos que la red telecom ya tiene.
             Sin documentos, sin fricción.
           </p>
-          <Link href="/dashboard/" className="hero-cta" style={styles.primaryCta}>
+          <Link href="/demo/" className="hero-cta" style={styles.primaryCta}>
             Probar demo
           </Link>
           <a href="#how" className="hero-scroll-hint" style={styles.scrollHint}>
