@@ -4,19 +4,30 @@
   "private": true,
   "description": "TrustGate — Verificación de Identidad Instantánea por Red Telecom",
   "scripts": {
-    "build": "npm run build:api && npm run build:web",
-    "build:api": "npm exec -w api next build",
-    "build:web": "npm run build --workspace=apps/web",
-    "dev:api": "npm run dev --workspace=apps/api",
-    "dev:web": "npm run dev --workspace=apps/web",
-    "deploy": "node scripts/deploy.js",
-    "deploy:api": "node scripts/deploy-api.js",
-    "deploy:web": "node scripts/deploy-web.js"
+    "dev": "next dev",
+    "dev:emulator": "FIRESTORE_EMULATOR_HOST=localhost:8080 next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "emulators": "firebase emulators:start --only firestore",
+    "deploy": "npm run lint && firebase deploy",
+    "destroy": "firebase apphosting:backends:delete trustgate --force && firebase firestore:delete verifications --recursive",
+    "destroy:apphosting": "firebase apphosting:backends:delete trustgate --force",
+    "destroy:firestore": "firebase firestore:delete verifications --recursive -y"
   },
-  "workspaces": [
-    "apps/api",
-    "apps/web"
-  ],
+  "dependencies": {
+    "firebase-admin": "^12.0.0",
+    "next": "14.2.18",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "typescript": "^5"
+  },
   "engines": {
     "node": ">=18"
   }

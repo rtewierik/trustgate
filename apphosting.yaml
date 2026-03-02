@@ -1,0 +1,22 @@
+# Firebase App Hosting — one build for frontend + API (Next.js)
+# See: https://firebase.google.com/docs/app-hosting/configure
+
+runConfig:
+  minInstances: 0
+  maxInstances: 1
+  concurrency: 50
+  memoryMiB: 512
+  cpu: 1
+
+# Project and optional secrets (set in Firebase Console or via apphosting:secrets:set)
+env:
+  - variable: GOOGLE_CLOUD_PROJECT
+    value: openg-hack26bar-512
+    availability:
+      - BUILD
+      - RUNTIME
+
+# Optional: Nokia Network as Code (use Secret Manager in production)
+# - variable: NAC_API_KEY
+#   secret: nac-api-key
+#   availability: [ RUNTIME ]

@@ -95,5 +95,3 @@ export async function kycMatch(
     return { match: false, match_level: "none", detail: String(e) };
   }
 }
-
-// TODO: Type casts and usage of fetch (migrate to Axios?)
