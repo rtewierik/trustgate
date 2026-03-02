@@ -3,7 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 
-const API_BASE = typeof window !== "undefined" ? "" : process.env.NEXT_PUBLIC_API_URL || "";
+const API_BASE =
+  typeof window !== "undefined" ? "" : process.env.NEXT_PUBLIC_API_URL || "";
 
 interface VerificationResult {
   verification_id: string;
@@ -11,7 +12,11 @@ interface VerificationResult {
   trust_score?: number;
   decision?: string;
   subject: { phone_number: string; country: string };
-  check_results?: Array<{ name: string; status: string; detail?: Record<string, unknown> }>;
+  check_results?: Array<{
+    name: string;
+    status: string;
+    detail?: Record<string, unknown>;
+  }>;
   created_at: string;
   expires_at: string;
 }
@@ -21,7 +26,9 @@ export default function HistoryPage() {
   const [value, setValue] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [verification, setVerification] = useState<VerificationResult | null>(null);
+  const [verification, setVerification] = useState<VerificationResult | null>(
+    null,
+  );
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -48,7 +55,9 @@ export default function HistoryPage() {
   return (
     <main style={styles.main}>
       <header style={styles.header}>
-        <Link href="/" style={styles.logo}>TrustGate</Link>
+        <Link href="/" style={styles.logo}>
+          TrustGate
+        </Link>
         <nav style={styles.nav}>
           <Link href="/dashboard/">Dashboard</Link>
           <Link href="/history/">History</Link>
@@ -56,14 +65,15 @@ export default function HistoryPage() {
       </header>
 
       <div style={styles.content}>
-        <h1 style={styles.h1}>Consultar verificación</h1>
+        <h1 style={styles.h1}>Consult Verification</h1>
         <p style={styles.subtitle}>
-          Obtén una verificación completada por <em>verification_id</em> o por <em>state</em> (verification_request_id).
+          Get a completed verification by <em>verification_id</em> or by{" "}
+          <em>state</em> (verification_request_id).
         </p>
 
         <form onSubmit={handleSubmit} style={styles.form}>
           <div style={styles.row}>
-            <label style={styles.label}>Buscar por</label>
+            <label style={styles.label}>Search by</label>
             <select
               value={queryBy}
               onChange={(e) => setQueryBy(e.target.value as "id" | "state")}
@@ -74,7 +84,9 @@ export default function HistoryPage() {
             </select>
           </div>
           <div style={styles.row}>
-            <label style={styles.label}>{queryBy === "id" ? "Verification ID" : "State"}</label>
+            <label style={styles.label}>
+              {queryBy === "id" ? "Verification ID" : "State"}
+            </label>
             <input
               type="text"
               value={value}
@@ -84,7 +96,7 @@ export default function HistoryPage() {
             />
           </div>
           <button type="submit" disabled={loading} style={styles.button}>
-            {loading ? "Buscando…" : "Buscar"}
+            {loading ? "Searching…" : "Search"}
           </button>
         </form>
 
@@ -92,27 +104,53 @@ export default function HistoryPage() {
 
         {verification && (
           <div style={styles.result}>
-            <h2 style={{ ...styles.resultTitle, color: verification.decision === "allow" ? "var(--success)" : "var(--danger)" }}>
-              {verification.decision === "allow" ? "✓ Aprobado" : "✗ Denegado"}
+            <h2
+              style={{
+                ...styles.resultTitle,
+                color:
+                  verification.decision === "allow"
+                    ? "var(--success)"
+                    : "var(--danger)",
+              }}
+            >
+              {verification.decision === "allow" ? "✓ Approved" : "✗ Denied"}
             </h2>
             <p style={styles.trustScore}>
-              Trust Score: <strong>{verification.trust_score ?? "—"}/100</strong>
+              Trust Score:{" "}
+              <strong>{verification.trust_score ?? "—"}/100</strong>
             </p>
-            <p style={styles.status}>Estado: {verification.status}</p>
+            <p style={styles.status}>Status: {verification.status}</p>
             <p style={styles.muted}>
-              Teléfono: {verification.subject?.phone_number} · País: {verification.subject?.country}
+              Phone: {verification.subject?.phone_number} · Country:{" "}
+              {verification.subject?.country}
             </p>
-            {verification.check_results && verification.check_results.length > 0 && (
-              <ul style={styles.checks}>
-                {verification.check_results.map((c) => (
-                  <li key={c.name}>
-                    {c.name}: <span style={{ color: c.status === "pass" ? "var(--success)" : "var(--danger)" }}>{c.status}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
+            {verification.check_results &&
+              verification.check_results.length > 0 && (
+                <ul style={styles.checks}>
+                  {verification.check_results.map((c) => (
+                    <li key={c.name}>
+                      {c.name}:{" "}
+                      <span
+                        style={{
+                          color:
+                            c.status === "pass"
+                              ? "var(--success)"
+                              : "var(--danger)",
+                        }}
+                      >
+                        {c.status}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
             <p style={styles.muted}>ID: {verification.verification_id}</p>
-            <p style={styles.muted}>Creado: {verification.created_at ? new Date(verification.created_at).toLocaleString() : "—"}</p>
+            <p style={styles.muted}>
+              Creado:{" "}
+              {verification.created_at
+                ? new Date(verification.created_at).toLocaleString()
+                : "—"}
+            </p>
           </div>
         )}
       </div>
@@ -131,9 +169,19 @@ const styles: Record<string, React.CSSProperties> = {
   },
   logo: { fontSize: "1.25rem", fontWeight: 700, color: "var(--accent)" },
   nav: { display: "flex", gap: "1.5rem" },
-  content: { flex: 1, padding: "2rem", maxWidth: "560px", margin: "0 auto", width: "100%" },
+  content: {
+    flex: 1,
+    padding: "2rem",
+    maxWidth: "560px",
+    margin: "0 auto",
+    width: "100%",
+  },
   h1: { marginBottom: "0.5rem", fontSize: "1.5rem" },
-  subtitle: { color: "var(--muted)", marginBottom: "1.5rem", fontSize: "0.9rem" },
+  subtitle: {
+    color: "var(--muted)",
+    marginBottom: "1.5rem",
+    fontSize: "0.9rem",
+  },
   form: { display: "flex", flexDirection: "column", gap: "1rem" },
   row: { display: "flex", flexDirection: "column", gap: "0.25rem" },
   label: { fontSize: "0.875rem", color: "var(--muted)" },

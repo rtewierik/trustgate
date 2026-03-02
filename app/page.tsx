@@ -18,8 +18,8 @@ export default function LandingPage() {
           <span style={styles.h1Accent}>Ask the network.</span>
         </h1>
         <p style={styles.subtitle}>
-          Identity verification in less than 2 seconds with data that the telecom network already has.
-          No documents, no friction.
+          Identity verification in less than 2 seconds with data that the
+          telecom network already has. No documents, no friction.
         </p>
         <div style={styles.ctas}>
           <Link href="/dashboard/" style={styles.primaryCta}>
@@ -35,12 +35,15 @@ export default function LandingPage() {
         <h2 style={styles.h2}>How it works</h2>
         <div style={styles.cards}>
           <div style={styles.card}>
-            <strong>1. NNumber + Details</strong>
+            <strong>1. Number + Details</strong>
             <p>The user enters their phone number and name/date of birth.</p>
           </div>
           <div style={styles.card}>
             <strong>2. Three Checks</strong>
-            <p>Number Verification, SIM Swap and KYC Match in parallel via CAMARA.</p>
+            <p>
+              Number Verification, SIM Swap and KYC Match in parallel via
+              CAMARA.
+            </p>
           </div>
           <div style={styles.card}>
             <strong>3. Trust Score</strong>
@@ -76,10 +79,19 @@ const styles: Record<string, React.CSSProperties> = {
     padding: "3rem 2rem",
     textAlign: "center",
   },
-  h1: { fontSize: "clamp(1.75rem, 4vw, 2.5rem)", marginBottom: "1rem", fontWeight: 600 },
+  h1: {
+    fontSize: "clamp(1.75rem, 4vw, 2.5rem)",
+    marginBottom: "1rem",
+    fontWeight: 600,
+  },
   h1Accent: { color: "var(--accent)" },
   subtitle: { color: "var(--muted)", maxWidth: "42ch", marginBottom: "2rem" },
-  ctas: { display: "flex", gap: "1rem", flexWrap: "wrap", justifyContent: "center" },
+  ctas: {
+    display: "flex",
+    gap: "1rem",
+    flexWrap: "wrap",
+    justifyContent: "center",
+  },
   primaryCta: {
     background: "var(--accent)",
     color: "var(--bg)",

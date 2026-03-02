@@ -34,7 +34,9 @@ function DashboardContent() {
   const [familyName, setFamilyName] = useState("");
   const [dob, setDob] = useState("");
   const [loading, setLoading] = useState(false);
-  const [initiateResult, setInitiateResult] = useState<InitiateResult | null>(null);
+  const [initiateResult, setInitiateResult] = useState<InitiateResult | null>(
+    null,
+  );
   const [result, setResult] = useState<VerificationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -43,7 +45,9 @@ function DashboardContent() {
     if (!state) return;
     setInitiateResult(null);
     setLoading(true);
-    fetch(`${API_BASE}/api/v1/completed-verifications?state=${encodeURIComponent(state)}`)
+    fetch(
+      `${API_BASE}/api/v1/completed-verifications?state=${encodeURIComponent(state)}`,
+    )
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (data) setResult(data);
@@ -79,10 +83,13 @@ function DashboardContent() {
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || data.message || "Inicio de verificación fallido");
+      if (!res.ok)
+        throw new Error(
+          data.error || data.message || "Verification failed to start",
+        );
       setInitiateResult(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error de red");
+      setError(err instanceof Error ? err.message : "Network error");
     } finally {
       setLoading(false);
     }
@@ -130,6 +137,7 @@ function DashboardContent() {
               <option value="DE">DE</option>
               <option value="FR">FR</option>
               <option value="GB">GB</option>
+              <option value="US">US</option>
             </select>
           </div>
           <div style={styles.row}>
@@ -170,19 +178,27 @@ function DashboardContent() {
 
         {initiateResult && (
           <div style={styles.result}>
-            <h2 style={styles.resultTitle}>Siguiente paso: verificación en red</h2>
+            <h2 style={styles.resultTitle}>Next step: network verification</h2>
             <p style={{ marginBottom: "1rem", color: "var(--muted)" }}>
-              Redirige al usuario al operador para completar la verificación. Luego volverá a esta página con el resultado.
+              Redirect the user to the operator to complete verification. Then
+              they will return to this page with the result.
             </p>
             <a
               href={initiateResult.authorization_url}
               target="_blank"
               rel="noopener noreferrer"
-              style={{ ...styles.button, display: "inline-block", textDecoration: "none", textAlign: "center" }}
+              style={{
+                ...styles.button,
+                display: "inline-block",
+                textDecoration: "none",
+                textAlign: "center",
+              }}
             >
-              Abrir enlace de verificación
+              Open verification link
             </a>
-            <p style={styles.muted}>Request ID: {initiateResult.verification_request_id}</p>
+            <p style={styles.muted}>
+              Request ID: {initiateResult.verification_request_id}
+            </p>
           </div>
         )}
 
@@ -197,12 +213,12 @@ function DashboardContent() {
                     : "var(--danger)",
               }}
             >
-              {result.decision === "allow" ? "✓ Aprobado" : "✗ Denegado"}
+              {result.decision === "allow" ? "✓ Approved" : "✗ Denied"}
             </h2>
             <p style={styles.trustScore}>
               Trust Score: <strong>{result.trust_score}/100</strong>
             </p>
-            <p style={styles.status}>Estado: {result.status}</p>
+            <p style={styles.status}>Status: {result.status}</p>
             <ul style={styles.checks}>
               {result.checks?.map((c) => (
                 <li key={c.name}>
@@ -231,18 +247,22 @@ function DashboardContent() {
 
 export default function DashboardPage() {
   return (
-    <Suspense fallback={
-      <main style={styles.main}>
-        <header style={styles.header}>
-          <Link href="/" style={styles.logo}>TrustGate</Link>
-          <nav style={styles.nav}>
-            <Link href="/dashboard/">Dashboard</Link>
-            <Link href="/history/">Historial</Link>
-          </nav>
-        </header>
-        <div style={{ padding: "2rem", textAlign: "center" }}>Cargando…</div>
-      </main>
-    }>
+    <Suspense
+      fallback={
+        <main style={styles.main}>
+          <header style={styles.header}>
+            <Link href="/" style={styles.logo}>
+              TrustGate
+            </Link>
+            <nav style={styles.nav}>
+              <Link href="/dashboard/">Dashboard</Link>
+              <Link href="/history/">History</Link>
+            </nav>
+          </header>
+          <div style={{ padding: "2rem", textAlign: "center" }}>Loading…</div>
+        </main>
+      }
+    >
       <DashboardContent />
     </Suspense>
   );
