@@ -11,7 +11,7 @@ export interface VerificationResultCardData {
   status: string;
   trust_score?: number;
   decision?: "allow" | "deny";
-  /** risk_level from Gemini: low = CONFIABLE, medium = REVISAR, high = ALTO RIESGO */
+  /** risk_level from Gemini: low = LOW RISK, medium = REVIEW, high = HIGH RISK */
   risk_level?: "low" | "medium" | "high";
   /** One-line AI summary */
   summary?: string;
@@ -153,7 +153,7 @@ export function VerificationResultCard({
             color: success ? "var(--success)" : "var(--danger)",
           }}
         >
-          {success ? "Aprobado" : "Denegado"}
+          {success ? "Approved" : "Denied"}
         </h2>
       </div>
 
@@ -176,10 +176,10 @@ export function VerificationResultCard({
               }}
             >
               {verification.risk_level === "low"
-                ? "CONFIABLE"
+                ? "LOW RISK"
                 : verification.risk_level === "high"
-                  ? "ALTO RIESGO"
-                  : "REVISAR"}
+                  ? "HIGH RISK"
+                  : "REVIEW"}
             </p>
           )}
           {verification.trust_score != null && (
@@ -187,7 +187,7 @@ export function VerificationResultCard({
               Trust Score: <strong>{verification.trust_score}/100</strong>
             </p>
           )}
-          <p style={cardStyles.status}>Estado: {verification.status}</p>
+          <p style={cardStyles.status}>Status: {verification.status}</p>
 
           {verification.summary != null && verification.summary !== "" && (
             <div style={cardStyles.summary} role="region" aria-label="AI analysis">
@@ -227,12 +227,12 @@ export function VerificationResultCard({
 
           {showSubject && verification.subject && (
             <p style={cardStyles.muted}>
-              Teléfono: {verification.subject.phone_number} · País: {verification.subject.country}
+              Phone: {verification.subject.phone_number} · Country: {verification.subject.country}
             </p>
           )}
           {showCreatedAt && verification.created_at && (
             <p style={cardStyles.muted}>
-              Creado: {new Date(verification.created_at).toLocaleString()}
+              Created: {new Date(verification.created_at).toLocaleString()}
             </p>
           )}
         </>

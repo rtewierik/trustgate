@@ -49,7 +49,7 @@ export interface VerificationRecord {
   trust_score?: number;
   decision?: "allow" | "deny";
   check_results?: Array<{ name: string; status: string; detail?: Record<string, unknown> }>;
-  /** From Gemini: low = CONFIABLE, medium = REVISAR, high = ALTO RIESGO */
+  /** From Gemini: low = LOW RISK, medium = REVIEW, high = HIGH RISK */
   risk_level?: "low" | "medium" | "high";
   /** One-line AI summary for UI */
   summary?: string;

@@ -2,7 +2,7 @@
   "name": "trustgate",
   "version": "0.1.0",
   "private": true,
-  "description": "TrustGate — Verificación de Identidad Instantánea por Red Telecom",
+  "description": "TrustGate — Instant Identity Verification via Telecom Network",
   "scripts": {
     "dev": "next dev",
     "dev:emulator": "FIRESTORE_EMULATOR_HOST=localhost:8080 next dev",
