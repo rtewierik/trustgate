@@ -18,7 +18,7 @@ export default function LandingPage() {
           <span style={styles.h1Accent}>Ask the network.</span>
         </h1>
         <p style={styles.subtitle}>
-          Identity verification in less than 2 seconds with data that the
+          Identity verification in less than 10 seconds with data that the
           telecom network already has. No documents, no friction.
         </p>
         <div style={styles.ctas}>
