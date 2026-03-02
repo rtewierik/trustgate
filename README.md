@@ -91,7 +91,7 @@ Para usar **Firestore emulator** (sin tocar producción):
    npm run dev:emulator
    ```
 
-   Esto pone `FIRESTORE_EMULATOR_HOST=localhost:8080` y ejecuta `next dev`. La app usa el Firestore emulado; las verificaciones se guardan y listan solo en local.
+   Esto pone `FIRESTORE_EMULATOR_HOST=localhost:8080` y ejecuta `next dev`. La app usa el Firestore emulado; las verificaciones se guardan en local y se consultan por state o verification_id.
 
 Si prefieres no usar el script, en la segunda terminal:
 
@@ -128,30 +128,37 @@ La URL de la app aparece en Firebase Console → App Hosting → tu backend (for
 
 ## Contrato del API
 
-Misma app = mismo dominio; las rutas de API son relativas.
+Misma app = mismo dominio; las rutas de API son relativas. **Cada petición trata una sola verificación:** no hay listados; se consulta por identificador (state o verification_id).
 
-### POST /api/v1/verifications
+### Flujo de verificación
 
-Crea una verificación. Body de ejemplo:
+1. **Iniciar** — `POST /api/v1/verifications/initiate` con subject, redirect_uri, etc. Respuesta: `authorization_url` y `verification_request_id` (state).
+2. **Redirect** — El usuario abre `authorization_url` y completa el flujo en el operador. Vuelve a tu `redirect_uri` con `state` y `verification_id` en la URL.
+3. **Resultado** — El callback interno escribe **un** registro de verificación completada. Para obtenerlo: `GET` por `state` (verification_request_id) o por `verification_id`.
+
+### POST /api/v1/verifications/initiate
+
+Inicia **una** verificación: guarda la petición y devuelve el enlace de autorización. Body de ejemplo:
 
 ```json
 {
   "subject": { "phone_number": "+34XXXXXXXXX", "country": "ES" },
+  "redirect_uri": "https://tu-app/dashboard",
   "claims": { "given_name": "Ada", "family_name": "Lovelace", "date_of_birth": "1995-05-10" },
   "checks": ["number_verification", "sim_swap", "kyc_match"],
   "policy": { "min_trust_score": 75, "sim_swap_max_age_hours": 72 }
 }
 ```
 
-Respuesta: `verification_id`, `status`, `trust_score`, `decision`, `checks`, `expires_at`.
+**Respuesta:** `authorization_url`, `verification_request_id` (usar como `state` al consultar), `message`. Sin listados ni límites; una petición = un proceso de verificación.
 
-### GET /api/v1/verifications
+### GET /api/v1/completed-verifications?state=&lt;verification_request_id&gt;
 
-Lista verificaciones. Query: `?limit=50`.
+Devuelve **la** verificación completada para esa petición. **Requerido:** query `state` (el `verification_request_id` devuelto en initiate). Respuesta: un único objeto de verificación (campos completos). Sin `state` responde 400.
 
-### GET /api/v1/verifications/:id
+### GET /api/v1/completed-verifications/:id
 
-Devuelve una verificación por ID.
+Devuelve **una** verificación completada por `verification_id` (path). Un único objeto de verificación. No hay endpoint de listado; solo consulta por ID (state o verification_id).
 
 ### GET /api/health
 
@@ -167,8 +174,8 @@ trustgate/
 │   ├── layout.tsx       # Layout + globals
 │   ├── page.tsx         # Landing
 │   ├── dashboard/       # Formulario verificación + Trust Score
-│   ├── history/         # Tabla historial
-│   └── api/             # API routes (/api/health, /api/v1/verifications)
+│   ├── history/         # Consultar una verificación por verification_id o state
+│   └── api/             # API: health, verification/initiate, completed-verifications (por state o :id)
 ├── lib/                 # firestore, nac (Nokia), trust-score
 ├── apphosting.yaml      # App Hosting: runConfig, env
 ├── firebase.json        # apphosting + firestore

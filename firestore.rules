@@ -4,5 +4,8 @@ service cloud.firestore {
     match /verifications/{verificationId} {
       allow read, write: if false;
     }
+    match /number_verification_requests/{state} {
+      allow read, write: if false;
+    }
   }
 }

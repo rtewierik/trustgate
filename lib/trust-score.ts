@@ -26,14 +26,18 @@ export function computeTrustScore(
   checks.push({
     name: "sim_swap",
     status: simOk ? "pass" : "fail",
-    detail: { last_swap_hours_ago: simSwap.last_swap_hours_ago },
+    detail:
+      simSwap.last_swap_hours_ago !== undefined
+        ? { last_swap_hours_ago: simSwap.last_swap_hours_ago }
+        : undefined,
   });
 
   const kycOk = kycMatch.match && (kycMatch.match_level === "high" || kycMatch.match_level === "medium");
   checks.push({
     name: "kyc_match",
     status: kycOk ? "pass" : "fail",
-    detail: { match_level: kycMatch.match_level },
+    detail:
+      kycMatch.match_level !== undefined ? { match_level: kycMatch.match_level } : undefined,
   });
 
   let score = 0;

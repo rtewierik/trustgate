@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 
 const API_BASE =
   typeof window !== "undefined" ? "" : process.env.NEXT_PUBLIC_API_URL || "";
@@ -19,27 +20,55 @@ interface VerificationResult {
   expires_at: string;
 }
 
-export default function DashboardPage() {
+interface InitiateResult {
+  authorization_url: string;
+  verification_request_id: string;
+  message: string;
+}
+
+function DashboardContent() {
+  const searchParams = useSearchParams();
   const [phone, setPhone] = useState("");
   const [country, setCountry] = useState("ES");
   const [givenName, setGivenName] = useState("");
   const [familyName, setFamilyName] = useState("");
   const [dob, setDob] = useState("");
   const [loading, setLoading] = useState(false);
+  const [initiateResult, setInitiateResult] = useState<InitiateResult | null>(null);
   const [result, setResult] = useState<VerificationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const state = searchParams.get("state");
+    if (!state) return;
+    setInitiateResult(null);
+    setLoading(true);
+    fetch(`${API_BASE}/api/v1/completed-verifications?state=${encodeURIComponent(state)}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data) setResult(data);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [searchParams]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     setResult(null);
+    setInitiateResult(null);
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/api/v1/verifications`, {
+      const redirectUri =
+        typeof window !== "undefined"
+          ? `${window.location.origin}/dashboard`
+          : `${process.env.NEXT_PUBLIC_API_URL || ""}/dashboard`;
+      const res = await fetch(`${API_BASE}/api/v1/verifications/initiate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           subject: { phone_number: phone, country },
+          redirect_uri: redirectUri,
           claims: {
             given_name: givenName || undefined,
             family_name: familyName || undefined,
@@ -50,9 +79,8 @@ export default function DashboardPage() {
         }),
       });
       const data = await res.json();
-      if (!res.ok)
-        throw new Error(data.error || data.message || "Verification failed");
-      setResult(data);
+      if (!res.ok) throw new Error(data.error || data.message || "Inicio de verificación fallido");
+      setInitiateResult(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error de red");
     } finally {
@@ -140,6 +168,24 @@ export default function DashboardPage() {
 
         {error && <div style={styles.error}>{error}</div>}
 
+        {initiateResult && (
+          <div style={styles.result}>
+            <h2 style={styles.resultTitle}>Siguiente paso: verificación en red</h2>
+            <p style={{ marginBottom: "1rem", color: "var(--muted)" }}>
+              Redirige al usuario al operador para completar la verificación. Luego volverá a esta página con el resultado.
+            </p>
+            <a
+              href={initiateResult.authorization_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ ...styles.button, display: "inline-block", textDecoration: "none", textAlign: "center" }}
+            >
+              Abrir enlace de verificación
+            </a>
+            <p style={styles.muted}>Request ID: {initiateResult.verification_request_id}</p>
+          </div>
+        )}
+
         {result && (
           <div style={styles.result}>
             <h2
@@ -158,7 +204,7 @@ export default function DashboardPage() {
             </p>
             <p style={styles.status}>Estado: {result.status}</p>
             <ul style={styles.checks}>
-              {result.checks.map((c) => (
+              {result.checks?.map((c) => (
                 <li key={c.name}>
                   {c.name}:{" "}
                   <span
@@ -180,6 +226,25 @@ export default function DashboardPage() {
         )}
       </div>
     </main>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense fallback={
+      <main style={styles.main}>
+        <header style={styles.header}>
+          <Link href="/" style={styles.logo}>TrustGate</Link>
+          <nav style={styles.nav}>
+            <Link href="/dashboard/">Dashboard</Link>
+            <Link href="/history/">Historial</Link>
+          </nav>
+        </header>
+        <div style={{ padding: "2rem", textAlign: "center" }}>Cargando…</div>
+      </main>
+    }>
+      <DashboardContent />
+    </Suspense>
   );
 }
 
