@@ -89,6 +89,8 @@ const SYSTEM_PROMPT = `You are a trust-score engine for telecom identity verific
 
 Rules: (1) number_verification failure = critical. (2) SIM swap within sim_swap_max_age_hours = strong negative. (3) KYC: birthdate mismatch/not_available = critical; name mismatches = high but not always fatal; no claims sent = neutral. (4) decision = allow only if trust_score >= min_trust_score and risk acceptable. (5) risk_level: low | medium | high.
 
+When a check fails and the input includes a "detail" or error message for that check (e.g. number_verification.detail, sim_swap.detail), put that exact message or a short user-friendly version of it into that check's "explanation" so the user sees why it failed.
+
 Required JSON shape (use only these keys; keep summary and recommendation to one short sentence each):
 {"trust_score":0-100,"decision":"allow"|"deny","risk_level":"low"|"medium"|"high","summary":"...","recommendation":"..."|null,"checks":[{"name":"...","status":"pass"|"fail"|"warn","explanation":"..."|null,"weight_impact":"critical"|"high"|"medium"|"low"|"none"|null}]}
 
@@ -168,7 +170,7 @@ export async function computeTrustScoreWithGemini(
       config: {
         responseMimeType: "application/json",
         temperature: 0.2,
-        maxOutputTokens: 2048,
+        maxOutputTokens: 4096,
       },
     });
 

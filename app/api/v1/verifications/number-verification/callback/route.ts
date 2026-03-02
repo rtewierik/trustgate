@@ -18,14 +18,51 @@ export async function GET(request: NextRequest) {
   const code = searchParams.get("code");
   const state = searchParams.get("state");
 
-  if (!code || !state) {
-    const rawMessage =
-      searchParams.get("error_description") ??
-      "Redirect must include code and state query parameters.";
-    const message = sanitizeErrorMessage(rawMessage);
+  if (!state) {
+    const message = "Redirect must include state query parameter.";
     const finalOrigin = getRequestOrigin(request);
-    const redirectUrl = `${finalOrigin}/demo/verification-popup?error_message=${encodeURIComponent(message)}`;
-    return NextResponse.redirect(redirectUrl);
+    const redirectUrl = new URL(`${finalOrigin}/demo/verification-popup`);
+    redirectUrl.searchParams.set("error_message", message);
+    return NextResponse.redirect(redirectUrl.toString());
+  }
+
+  if (searchParams.has("error_description") && searchParams.get("error_description")) {
+    const record = await getVerification(state);
+    if (record?.status === "pending") {
+      const rawMessage = searchParams.get("error_description")!;
+      const message = sanitizeErrorMessage(rawMessage);
+      const policy = record.policy ?? { min_trust_score: 75 };
+      const syntheticNumVer = { verified: false as const, detail: message };
+      const syntheticSimSwap = { swapped: false, last_swap_hours_ago: 999 };
+      const syntheticKycMatch = { match: false as const, match_level: "none" as const };
+      const result = await computeTrustScoreWithGemini(
+        syntheticNumVer,
+        syntheticSimSwap,
+        syntheticKycMatch,
+        policy
+      );
+      const sanitizedCheckResults = sanitizeCheckResults(result.checks);
+      await completeVerification(state, {
+        status: "denied",
+        trust_score: result.trust_score,
+        decision: result.decision,
+        check_results: sanitizedCheckResults,
+        completed_at: new Date().toISOString(),
+        expires_at: null,
+        ...(result.risk_level != null && { risk_level: result.risk_level }),
+        ...(result.summary != null && result.summary !== "" && { summary: result.summary }),
+        ...(result.recommendation != null && result.recommendation !== "" && { recommendation: result.recommendation }),
+      });
+    }
+  }
+
+  if (!code) {
+    const message = "Redirect must include code query parameter.";
+    const finalOrigin = getRequestOrigin(request);
+    const redirectUrl = new URL(`${finalOrigin}/demo/verification-popup`);
+    redirectUrl.searchParams.set("error_message", message);
+    if (state) redirectUrl.searchParams.set("state", state);
+    return NextResponse.redirect(redirectUrl.toString());
   }
 
   const record = await getVerification(state);

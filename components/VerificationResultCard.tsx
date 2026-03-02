@@ -157,12 +157,12 @@ export function VerificationResultCard({
         </h2>
       </div>
 
-      {verification.error_message && (
+      {/* Only show top-level error when there is no Gemini/check content (e.g. legacy or fallback) so we always render the full response. */}
+      {verification.error_message && checks.length === 0 && (
         <p style={cardStyles.errorMessage}>{verification.error_message}</p>
       )}
 
-      {!verification.error_message && (
-        <>
+      <>
           {verification.risk_level != null && (
             <p
               style={{
@@ -235,8 +235,7 @@ export function VerificationResultCard({
               Created: {new Date(verification.created_at).toLocaleString()}
             </p>
           )}
-        </>
-      )}
+      </>
 
       {verification.verification_id && (
         <p style={cardStyles.muted}>Verification ID: {verification.verification_id}</p>
