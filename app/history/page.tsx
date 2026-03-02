@@ -1,41 +1,49 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 
 const API_BASE = typeof window !== "undefined" ? "" : process.env.NEXT_PUBLIC_API_URL || "";
 
-interface VerificationSummary {
+interface VerificationResult {
   verification_id: string;
   status: string;
-  trust_score: number;
-  decision: string;
+  trust_score?: number;
+  decision?: string;
   subject: { phone_number: string; country: string };
+  check_results?: Array<{ name: string; status: string; detail?: Record<string, unknown> }>;
   created_at: string;
+  expires_at: string;
 }
 
 export default function HistoryPage() {
-  const [list, setList] = useState<VerificationSummary[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [queryBy, setQueryBy] = useState<"id" | "state">("id");
+  const [value, setValue] = useState("");
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [verification, setVerification] = useState<VerificationResult | null>(null);
 
-  useEffect(() => {
-    let cancelled = false;
-    async function fetchList() {
-      try {
-        const res = await fetch(`${API_BASE}/api/v1/verifications?limit=50`);
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "Failed to load");
-        if (!cancelled) setList(data.verifications || []);
-      } catch (err) {
-        if (!cancelled) setError(err instanceof Error ? err.message : "Error");
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setVerification(null);
+    if (!value.trim()) return;
+    setLoading(true);
+    try {
+      const url =
+        queryBy === "id"
+          ? `${API_BASE}/api/v1/completed-verifications/${encodeURIComponent(value.trim())}`
+          : `${API_BASE}/api/v1/completed-verifications?state=${encodeURIComponent(value.trim())}`;
+      const res = await fetch(url);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || data.message || "Not found");
+      setVerification(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error");
+    } finally {
+      setLoading(false);
     }
-    fetchList();
-    return () => { cancelled = true; };
-  }, []);
+  }
 
   return (
     <main style={styles.main}>
@@ -48,52 +56,63 @@ export default function HistoryPage() {
       </header>
 
       <div style={styles.content}>
-        <h1 style={styles.h1}>Historial de verificaciones</h1>
+        <h1 style={styles.h1}>Consultar verificación</h1>
         <p style={styles.subtitle}>
-          Últimas verificaciones realizadas.
+          Obtén una verificación completada por <em>verification_id</em> o por <em>state</em> (verification_request_id).
         </p>
 
-        {loading && <p style={styles.muted}>Cargando…</p>}
-        {error && <p style={styles.error}>{error}</p>}
+        <form onSubmit={handleSubmit} style={styles.form}>
+          <div style={styles.row}>
+            <label style={styles.label}>Buscar por</label>
+            <select
+              value={queryBy}
+              onChange={(e) => setQueryBy(e.target.value as "id" | "state")}
+              style={styles.input}
+            >
+              <option value="id">verification_id</option>
+              <option value="state">state (verification_request_id)</option>
+            </select>
+          </div>
+          <div style={styles.row}>
+            <label style={styles.label}>{queryBy === "id" ? "Verification ID" : "State"}</label>
+            <input
+              type="text"
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              placeholder={queryBy === "id" ? "ver_xxx" : "nv_xxx"}
+              style={styles.input}
+            />
+          </div>
+          <button type="submit" disabled={loading} style={styles.button}>
+            {loading ? "Buscando…" : "Buscar"}
+          </button>
+        </form>
 
-        {!loading && !error && (
-          <div style={styles.tableWrap}>
-            <table style={styles.table}>
-              <thead>
-                <tr>
-                  <th style={styles.th}>Teléfono</th>
-                  <th style={styles.th}>País</th>
-                  <th style={styles.th}>Trust Score</th>
-                  <th style={styles.th}>Decisión</th>
-                  <th style={styles.th}>Estado</th>
-                  <th style={styles.th}>Fecha</th>
-                </tr>
-              </thead>
-              <tbody>
-                {list.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} style={styles.empty}>Sin verificaciones aún</td>
-                  </tr>
-                ) : (
-                  list.map((v) => (
-                    <tr key={v.verification_id}>
-                      <td style={styles.td}>{v.subject.phone_number}</td>
-                      <td style={styles.td}>{v.subject.country}</td>
-                      <td style={styles.td}>{v.trust_score ?? "—"}</td>
-                      <td style={styles.td}>
-                        <span style={{ color: v.decision === "allow" ? "var(--success)" : "var(--danger)" }}>
-                          {v.decision}
-                        </span>
-                      </td>
-                      <td style={styles.td}>{v.status}</td>
-                      <td style={styles.td}>
-                        {v.created_at ? new Date(v.created_at).toLocaleString() : "—"}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+        {error && <div style={styles.error}>{error}</div>}
+
+        {verification && (
+          <div style={styles.result}>
+            <h2 style={{ ...styles.resultTitle, color: verification.decision === "allow" ? "var(--success)" : "var(--danger)" }}>
+              {verification.decision === "allow" ? "✓ Aprobado" : "✗ Denegado"}
+            </h2>
+            <p style={styles.trustScore}>
+              Trust Score: <strong>{verification.trust_score ?? "—"}/100</strong>
+            </p>
+            <p style={styles.status}>Estado: {verification.status}</p>
+            <p style={styles.muted}>
+              Teléfono: {verification.subject?.phone_number} · País: {verification.subject?.country}
+            </p>
+            {verification.check_results && verification.check_results.length > 0 && (
+              <ul style={styles.checks}>
+                {verification.check_results.map((c) => (
+                  <li key={c.name}>
+                    {c.name}: <span style={{ color: c.status === "pass" ? "var(--success)" : "var(--danger)" }}>{c.status}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <p style={styles.muted}>ID: {verification.verification_id}</p>
+            <p style={styles.muted}>Creado: {verification.created_at ? new Date(verification.created_at).toLocaleString() : "—"}</p>
           </div>
         )}
       </div>
@@ -112,20 +131,46 @@ const styles: Record<string, React.CSSProperties> = {
   },
   logo: { fontSize: "1.25rem", fontWeight: 700, color: "var(--accent)" },
   nav: { display: "flex", gap: "1.5rem" },
-  content: { flex: 1, padding: "2rem", maxWidth: "1000px", margin: "0 auto", width: "100%" },
+  content: { flex: 1, padding: "2rem", maxWidth: "560px", margin: "0 auto", width: "100%" },
   h1: { marginBottom: "0.5rem", fontSize: "1.5rem" },
   subtitle: { color: "var(--muted)", marginBottom: "1.5rem", fontSize: "0.9rem" },
-  tableWrap: { overflowX: "auto", border: "1px solid var(--border)", borderRadius: "12px" },
-  table: { width: "100%", borderCollapse: "collapse" },
-  th: {
-    textAlign: "left",
-    padding: "0.75rem 1rem",
-    borderBottom: "1px solid var(--border)",
+  form: { display: "flex", flexDirection: "column", gap: "1rem" },
+  row: { display: "flex", flexDirection: "column", gap: "0.25rem" },
+  label: { fontSize: "0.875rem", color: "var(--muted)" },
+  input: {
+    padding: "0.5rem 0.75rem",
+    borderRadius: "8px",
+    border: "1px solid var(--border)",
     background: "var(--surface)",
-    fontSize: "0.875rem",
+    color: "var(--text)",
   },
-  td: { padding: "0.75rem 1rem", borderBottom: "1px solid var(--border)", fontSize: "0.875rem" },
-  empty: { padding: "2rem", textAlign: "center", color: "var(--muted)" },
-  muted: { color: "var(--muted)" },
-  error: { color: "var(--danger)" },
+  button: {
+    marginTop: "0.5rem",
+    padding: "0.75rem 1.5rem",
+    background: "var(--accent)",
+    color: "var(--bg)",
+    border: "none",
+    borderRadius: "8px",
+    fontWeight: 600,
+  },
+  error: {
+    marginTop: "1rem",
+    padding: "1rem",
+    background: "rgba(255,71,87,0.15)",
+    border: "1px solid var(--danger)",
+    borderRadius: "8px",
+    color: "var(--danger)",
+  },
+  result: {
+    marginTop: "2rem",
+    padding: "1.5rem",
+    background: "var(--surface)",
+    border: "1px solid var(--border)",
+    borderRadius: "12px",
+  },
+  resultTitle: { marginBottom: "0.5rem" },
+  trustScore: { marginBottom: "0.25rem" },
+  status: { marginBottom: "0.5rem", fontSize: "0.9rem" },
+  checks: { listStyle: "none", fontSize: "0.875rem", color: "var(--muted)" },
+  muted: { marginTop: "0.25rem", fontSize: "0.875rem", color: "var(--muted)" },
 };
