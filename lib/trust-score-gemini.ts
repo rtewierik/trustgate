@@ -28,12 +28,12 @@ export interface TrustScoreGeminiInput {
   policy: { min_trust_score: number; sim_swap_max_age_hours?: number };
 }
 
-/** Structured response from Gemini. */
+/** Structured response from Gemini. Allow null for optional fields (model may return null). */
 const TrustScoreCheckSchema = z.object({
   name: z.string(),
   status: z.enum(["pass", "fail", "warn"]),
-  explanation: z.string().optional(),
-  weight_impact: z.enum(["critical", "high", "medium", "low", "none"]).optional(),
+  explanation: z.string().nullable().optional(),
+  weight_impact: z.enum(["critical", "high", "medium", "low", "none"]).nullable().optional(),
 });
 
 export const TrustScoreResponseSchema = z.object({
@@ -41,7 +41,7 @@ export const TrustScoreResponseSchema = z.object({
   decision: z.enum(["allow", "deny"]),
   risk_level: z.enum(["low", "medium", "high"]),
   summary: z.string(),
-  recommendation: z.string().optional(),
+  recommendation: z.string().nullable().optional(),
   checks: z.array(TrustScoreCheckSchema),
 });
 
@@ -217,8 +217,8 @@ export async function computeTrustScoreWithGemini(
       decision: r.decision,
       checks: checks.length > 0 ? checks : mapFallbackChecks(numberVerification, simSwap, kycMatch),
       risk_level: r.risk_level,
-      summary: r.summary,
-      recommendation: r.recommendation,
+      summary: r.summary ?? undefined,
+      recommendation: r.recommendation ?? undefined,
     };
   } catch (err) {
     console.error("[trust-score-gemini] Error:", err);
