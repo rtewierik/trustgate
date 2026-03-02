@@ -23,11 +23,14 @@ export async function GET(request: NextRequest) {
   const state = searchParams.get("state");
 
   if (!code || !state) {
+    const errorDescription = searchParams.get("error_description");
     return NextResponse.json(
       {
         error: "Missing code or state",
         code: "NUMBER_VERIFICATION_CALLBACK_INVALID",
-        message: "Redirect must include code and state query parameters.",
+        message:
+          errorDescription ??
+          "Redirect must include code and state query parameters.",
       },
       { status: 400 }
     );

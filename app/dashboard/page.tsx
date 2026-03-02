@@ -1,10 +1,12 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
 const API_BASE = typeof window !== "undefined" ? "" : process.env.NEXT_PUBLIC_API_URL || "";
+const POPUP_NAME = "TrustGateNumberVerification";
+const POPUP_SPEC = "width=480,height=640,scrollbars=yes,resizable=yes";
 
 interface VerificationResult {
   verification_id: string;
@@ -32,8 +34,63 @@ function DashboardContent() {
   const [initiateResult, setInitiateResult] = useState<InitiateResult | null>(null);
   const [result, setResult] = useState<VerificationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isPopupCloser, setIsPopupCloser] = useState(false);
+  const popupRef = useRef<Window | null>(null);
+  const pendingStateRef = useRef<string | null>(null);
+  const popupCheckIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // When we land in the dashboard with state (e.g. after callback redirect) inside a popup, tell opener and close
   useEffect(() => {
+    if (typeof window === "undefined") return;
+    const state = searchParams.get("state");
+    if (!state || !window.opener) return;
+    setIsPopupCloser(true);
+    const origin = window.location.origin;
+    window.opener.postMessage(
+      {
+        type: "NUMBER_VERIFICATION_DONE",
+        state,
+        number_verification: searchParams.get("number_verification"),
+        verification_id: searchParams.get("verification_id"),
+        status: searchParams.get("status"),
+        trust_score: searchParams.get("trust_score"),
+      },
+      origin
+    );
+    window.close();
+  }, [searchParams]);
+
+  // Listen for result from popup
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const handleMessage = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+      const data = event.data;
+      if (data?.type !== "NUMBER_VERIFICATION_DONE" || !data.state) return;
+      pendingStateRef.current = null;
+      if (popupCheckIntervalRef.current) {
+        clearInterval(popupCheckIntervalRef.current);
+        popupCheckIntervalRef.current = null;
+      }
+      setLoading(true);
+      fetch(`${API_BASE}/api/v1/completed-verifications?state=${encodeURIComponent(data.state)}`)
+        .then((res) => (res.ok ? res.json() : null))
+        .then((verification) => {
+          if (verification) {
+            setResult(verification);
+            setInitiateResult(null);
+          }
+        })
+        .catch(() => {})
+        .finally(() => setLoading(false));
+    };
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
+  }, []);
+
+  // When opener has state in URL (e.g. direct navigation), fetch result as before
+  useEffect(() => {
+    if (window.opener) return; // in popup, don't run this
     const state = searchParams.get("state");
     if (!state) return;
     setInitiateResult(null);
@@ -81,6 +138,51 @@ function DashboardContent() {
     } finally {
       setLoading(false);
     }
+  }
+
+  function openVerificationPopup() {
+    if (!initiateResult?.authorization_url) return;
+    if (popupCheckIntervalRef.current) {
+      clearInterval(popupCheckIntervalRef.current);
+      popupCheckIntervalRef.current = null;
+    }
+    const popup = window.open(
+      initiateResult.authorization_url,
+      POPUP_NAME,
+      POPUP_SPEC
+    );
+    popupRef.current = popup;
+    pendingStateRef.current = initiateResult.verification_request_id;
+    const interval = setInterval(() => {
+      if (!popupRef.current?.closed) return;
+      clearInterval(interval);
+      popupCheckIntervalRef.current = null;
+      const state = pendingStateRef.current;
+      if (!state) return;
+      pendingStateRef.current = null;
+      setLoading(true);
+      fetch(`${API_BASE}/api/v1/completed-verifications?state=${encodeURIComponent(state)}`)
+        .then((res) => (res.ok ? res.json() : null))
+        .then((verification) => {
+          if (verification) {
+            setResult(verification);
+            setInitiateResult(null);
+          }
+        })
+        .catch(() => {})
+        .finally(() => setLoading(false));
+    }, 500);
+    popupCheckIntervalRef.current = interval;
+  }
+
+  if (isPopupCloser) {
+    return (
+      <main style={styles.main}>
+        <div style={{ ...styles.content, textAlign: "center", paddingTop: "4rem" }}>
+          Cerrando…
+        </div>
+      </main>
+    );
   }
 
   return (
@@ -164,16 +266,15 @@ function DashboardContent() {
           <div style={styles.result}>
             <h2 style={styles.resultTitle}>Siguiente paso: verificación en red</h2>
             <p style={{ marginBottom: "1rem", color: "var(--muted)" }}>
-              Redirige al usuario al operador para completar la verificación. Luego volverá a esta página con el resultado.
+              Se abrirá una ventana emergente para que el usuario complete la verificación con el operador. Al cerrarla, esta página se actualizará con el resultado.
             </p>
-            <a
-              href={initiateResult.authorization_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{ ...styles.button, display: "inline-block", textDecoration: "none", textAlign: "center" }}
+            <button
+              type="button"
+              onClick={openVerificationPopup}
+              style={styles.button}
             >
-              Abrir enlace de verificación
-            </a>
+              Abrir verificación en ventana emergente
+            </button>
             <p style={styles.muted}>Request ID: {initiateResult.verification_request_id}</p>
           </div>
         )}
