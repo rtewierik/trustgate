@@ -1,19 +1,50 @@
 "use client";
 
+export interface VerificationCheckItem {
+  name: string;
+  status: string;
+  detail?: Record<string, unknown>;
+}
+
 export interface VerificationResultCardData {
   verification_id?: string;
   status: string;
   trust_score?: number;
   decision?: "allow" | "deny";
-  /** Check results (from API as check_results or checks) */
-  check_results?: Array<{ name: string; status: string; detail?: Record<string, unknown> }>;
-  checks?: Array<{ name: string; status: string; detail?: Record<string, unknown> }>;
+  /** Check results (from API as check_results or checks; may be array or object) */
+  check_results?: VerificationCheckItem[] | Record<string, VerificationCheckItem>;
+  checks?: VerificationCheckItem[] | Record<string, VerificationCheckItem> | string[];
   subject?: { phone_number: string; country: string };
   created_at?: string;
   /** Present for pending; absent/null for completed (persistent). */
   expires_at?: string | null;
   /** Shown on failure when no full verification (e.g. error from provider) */
   error_message?: string;
+}
+
+/** Normalize check_results/checks to an array of { name, status, detail? } for rendering. */
+function normalizeChecks(verification: VerificationResultCardData): VerificationCheckItem[] {
+  const raw = verification.check_results ?? verification.checks;
+  if (raw == null) return [];
+  if (Array.isArray(raw)) {
+    return raw
+      .map((item) => {
+        if (typeof item === "string")
+          return { name: item, status: "unknown" as string };
+        if (item && typeof item === "object" && "name" in item && "status" in item)
+          return { name: String(item.name), status: String(item.status), detail: (item as VerificationCheckItem).detail };
+        return null;
+      })
+      .filter((c): c is VerificationCheckItem => c != null);
+  }
+  if (typeof raw === "object" && !Array.isArray(raw)) {
+    return Object.entries(raw).map(([name, value]) => {
+      if (value && typeof value === "object" && "status" in value)
+        return { name, status: String((value as VerificationCheckItem).status), detail: (value as VerificationCheckItem).detail };
+      return { name, status: "unknown" };
+    });
+  }
+  return [];
 }
 
 const cardStyles: Record<string, React.CSSProperties> = {
@@ -75,7 +106,7 @@ export function VerificationResultCard({
   compact?: boolean;
 }) {
   const success = verification.decision === "allow";
-  const checks = verification.check_results ?? verification.checks ?? [];
+  const checks = normalizeChecks(verification);
 
   return (
     <div
@@ -139,15 +170,16 @@ export function VerificationResultCard({
               Teléfono: {verification.subject.phone_number} · País: {verification.subject.country}
             </p>
           )}
-          {verification.verification_id && (
-            <p style={cardStyles.muted}>ID: {verification.verification_id}</p>
-          )}
           {showCreatedAt && verification.created_at && (
             <p style={cardStyles.muted}>
               Creado: {new Date(verification.created_at).toLocaleString()}
             </p>
           )}
         </>
+      )}
+
+      {verification.verification_id && (
+        <p style={cardStyles.muted}>Verification ID: {verification.verification_id}</p>
       )}
     </div>
   );

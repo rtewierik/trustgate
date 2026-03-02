@@ -46,6 +46,12 @@ const styles: Record<string, React.CSSProperties> = {
     marginBottom: "1rem",
     maxWidth: "360px",
   },
+  muted: {
+    fontSize: "0.875rem",
+    color: "var(--muted)",
+    margin: 0,
+    marginBottom: "0.5rem",
+  },
 };
 
 function VerificationPopupContent() {
@@ -79,6 +85,9 @@ function VerificationPopupContent() {
           </div>
           <p style={styles.message}>Something went wrong.</p>
           <p style={styles.errorMessage}>{errorMessage}</p>
+          {state && (
+            <p style={styles.muted}>Verification ID: {state}</p>
+          )}
           <p style={styles.hint}>Close this window and retry.</p>
         </div>
       </main>
@@ -154,6 +163,9 @@ function VerificationPopupContent() {
                 ? "Verification successful."
                 : "Verification failed."}
             </p>
+            {state && (
+              <p style={styles.muted}>Verification ID: {state}</p>
+            )}
             <p style={styles.hint}>
               Close this window and continue on the main page.
             </p>
