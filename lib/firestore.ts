@@ -1,5 +1,7 @@
 import * as admin from "firebase-admin";
 
+let firestoreInstance: admin.firestore.Firestore | null = null;
+
 function getFirestore() {
   if (admin.apps.length === 0) {
     const projectId = process.env.GOOGLE_CLOUD_PROJECT || process.env.GCP_PROJECT;
@@ -11,8 +13,10 @@ function getFirestore() {
     } else {
       throw new Error("Firebase not configured: set FIREBASE_SERVICE_ACCOUNT_JSON or GOOGLE_CLOUD_PROJECT");
     }
+    firestoreInstance = admin.firestore();
+    firestoreInstance.settings({ ignoreUndefinedProperties: true });
   }
-  return admin.firestore();
+  return firestoreInstance ?? admin.firestore();
 }
 
 export const VERIFICATIONS_COLLECTION = "verifications";
