@@ -166,10 +166,10 @@ function DemoContent() {
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || data.message || "Inicio de verificación fallido");
+      if (!res.ok) throw new Error(data.error || data.message || "Failed to start verification");
       setInitiateResult(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error de red");
+      setError(err instanceof Error ? err.message : "Network error");
     } finally {
       setLoading(false);
     }
@@ -233,9 +233,9 @@ function DemoContent() {
         }),
       });
       if (res.ok) setFeedbackSent(true);
-      else setError("No se pudo enviar el feedback");
+      else setError("Could not send feedback");
     } catch {
-      setError("Error de red al enviar feedback");
+      setError("Network error while sending feedback");
     } finally {
       setFeedbackLoading(false);
     }
@@ -246,17 +246,17 @@ function DemoContent() {
     <main style={s.main}>
       <AppHeader />
       <div style={s.content}>
-        <h1 style={s.h1}>Verificación de identidad</h1>
+        <h1 style={s.h1}>Identity verification</h1>
 
         {!result ? (
           <>
             <p style={s.subtitle}>
-              Introduce el número y los datos del usuario. La verificación usa Number Verification, SIM Swap y KYC Match.
+              Enter the phone number and user details. Verification checks the origin phone number, recent SIM swaps and KYC matching.
             </p>
 
             <form onSubmit={handleSubmit} style={s.form}>
               <div style={s.row}>
-                <label style={s.label}>Teléfono</label>
+                <label style={s.label}>Phone</label>
                 <input
                   type="tel"
                   value={phone}
@@ -267,7 +267,7 @@ function DemoContent() {
                 />
               </div>
               <div style={s.row}>
-                <label style={s.label}>País</label>
+                <label style={s.label}>Country</label>
                 <select value={country} onChange={(e) => setCountry(e.target.value)} style={s.input}>
                   <option value="ES">ES</option>
                   <option value="DE">DE</option>
@@ -276,7 +276,7 @@ function DemoContent() {
                 </select>
               </div>
               <div style={s.row}>
-                <label style={s.label}>Nombre</label>
+                <label style={s.label}>First name</label>
                 <input
                   type="text"
                   value={givenName}
@@ -286,7 +286,7 @@ function DemoContent() {
                 />
               </div>
               <div style={s.row}>
-                <label style={s.label}>Apellidos</label>
+                <label style={s.label}>Last name</label>
                 <input
                   type="text"
                   value={familyName}
@@ -296,7 +296,7 @@ function DemoContent() {
                 />
               </div>
               <div style={s.row}>
-                <label style={s.label}>Fecha de nacimiento</label>
+                <label style={s.label}>Date of birth</label>
                 <input
                   type="date"
                   value={dob}
@@ -305,7 +305,7 @@ function DemoContent() {
                 />
               </div>
               <button type="submit" disabled={loading} style={s.button}>
-                {loading ? "Iniciando…" : "Iniciar verificación"}
+                {loading ? "Starting…" : "Start verification"}
               </button>
             </form>
 
@@ -313,12 +313,12 @@ function DemoContent() {
 
             {initiateResult && (
               <div ref={nextStepRef} style={s.result}>
-                <h2 style={s.resultTitle}>Siguiente paso: verificación en red</h2>
+                <h2 style={s.resultTitle}>Next step: network verification</h2>
                 <p style={{ marginBottom: "1rem", color: "var(--muted)" }}>
-                  Se abrirá una ventana emergente para que el usuario complete la verificación con el operador. Al cerrarla, esta página se actualizará con el resultado.
+                  A popup window will open for the user to complete verification with the operator. When closed, this page will update with the result.
                 </p>
                 <button type="button" onClick={openVerificationPopup} style={s.button}>
-                  Abrir verificación en ventana emergente
+                  Open verification in popup window
                 </button>
                 <p style={s.muted}>Verification ID: {initiateResult.verification_id}</p>
               </div>
@@ -327,10 +327,10 @@ function DemoContent() {
         ) : (
           <div style={{ marginTop: "2rem" }}>
             <VerificationResultCard verification={result} showSubject={false} />
-            <div style={s.feedbackSection} role="region" aria-label="Corrección del resultado">
-              <p style={s.feedbackTitle}>¿Fue correcto el resultado?</p>
+            <div style={s.feedbackSection} role="region" aria-label="Result correction">
+              <p style={s.feedbackTitle}>Was the result correct?</p>
               {feedbackSent ? (
-                <p style={s.feedbackThankYou}>Gracias, feedback guardado. Ayudará a mejorar las próximas decisiones.</p>
+                <p style={s.feedbackThankYou}>Thank you, feedback saved. It will help improve future decisions.</p>
               ) : (
                 <>
                   <div style={s.feedbackButtons}>
@@ -340,33 +340,33 @@ function DemoContent() {
                       onClick={() => submitFeedback("correct")}
                       disabled={feedbackLoading}
                     >
-                      Correcto
+                      Correct
                     </button>
                     <button
                       type="button"
                       style={{ ...s.feedbackBtn, ...s.feedbackBtnDanger }}
                       onClick={() => submitFeedback("false_positive")}
                       disabled={feedbackLoading}
-                      title="El sistema aprobó pero debería haber denegado"
+                      title="System approved but should have denied"
                     >
-                      Falso positivo
+                      False positive
                     </button>
                     <button
                       type="button"
                       style={{ ...s.feedbackBtn, ...s.feedbackBtnDanger }}
                       onClick={() => submitFeedback("false_negative")}
                       disabled={feedbackLoading}
-                      title="El sistema denegó pero debería haber aprobado"
+                      title="System denied but should have approved"
                     >
-                      Falso negativo
+                      False negative
                     </button>
                   </div>
                   <label style={{ display: "block", fontSize: "0.875rem", color: "var(--muted)", marginTop: "0.5rem" }}>
-                    Comentario (opcional)
+                    Comment (optional)
                   </label>
                   <textarea
                     style={s.feedbackComment}
-                    placeholder="Ej.: La fecha de nacimiento era correcta en los documentos."
+                    placeholder="E.g. Date of birth was correct on the documents."
                     value={feedbackComment}
                     onChange={(e) => setFeedbackComment(e.target.value)}
                   />
@@ -378,7 +378,7 @@ function DemoContent() {
               style={{ ...s.button, ...s.newVerificationBtn }}
               onClick={() => { setResult(null); setError(null); setFeedbackSent(false); setFeedbackComment(""); }}
             >
-              Nueva verificación
+              New verification
             </button>
           </div>
         )}
@@ -393,7 +393,7 @@ export default function DemoPage() {
       fallback={
         <main style={pageLayoutStyles.main}>
           <AppHeader />
-          <div style={{ padding: "2rem", textAlign: "center" }}>Cargando…</div>
+          <div style={{ padding: "2rem", textAlign: "center" }}>Loading…</div>
         </main>
       }
     >

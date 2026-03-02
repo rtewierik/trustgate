@@ -26,7 +26,7 @@ export default function LandingPage() {
       <header style={styles.header}>
         <span style={styles.logo}>TrustGate</span>
         <nav style={styles.nav}>
-          <Link href="/history/">Historial</Link>
+          <Link href="/history/">History</Link>
         </nav>
       </header>
 
@@ -34,19 +34,19 @@ export default function LandingPage() {
         <div style={styles.heroBg} aria-hidden />
         <div style={styles.heroContent}>
           <h1 style={styles.h1}>
-            El KYC del futuro no pide documentos.
+            The KYC of the future does not ask for documents.
             <br />
-            <span style={styles.h1Accent}>Pregunta a la red.</span>
+            <span style={styles.h1Accent}>Ask the network.</span>
           </h1>
           <p style={styles.subtitle}>
-            Verificación de identidad en menos de 2 segundos con datos que la red telecom ya tiene.
-            Sin documentos, sin fricción.
+            Identity verification in less than 2 seconds with data that the telecom network already has.
+            No documents, no friction.
           </p>
           <Link href="/demo/" className="hero-cta" style={styles.primaryCta}>
-            Probar demo
+            Try demo
           </Link>
           <a href="#how" className="hero-scroll-hint" style={styles.scrollHint} onClick={(e) => { e.preventDefault(); setHowExpanded(true); }}>
-            Cómo funciona ↓
+            How it works ↓
           </a>
         </div>
       </section>
@@ -58,23 +58,23 @@ export default function LandingPage() {
       >
         {howExpanded && (
           <>
-            <h2 style={styles.sectionTitle}>Cómo funciona</h2>
+            <h2 style={styles.sectionTitle}>How it works</h2>
             <div style={styles.expandableCard}>
               <div style={styles.cards}>
               <div style={styles.card}>
                 <span style={styles.cardNum}>1</span>
-                <strong>Número + datos</strong>
-                <p>El usuario introduce su teléfono y nombre/fecha de nacimiento.</p>
+                <strong>Number + details</strong>
+                <p>The user enters their phone number and name/date of birth.</p>
               </div>
               <div style={styles.card}>
                 <span style={styles.cardNum}>2</span>
-                <strong>Tres comprobaciones</strong>
-                <p>Number Verification, SIM Swap y KYC Match en paralelo vía CAMARA.</p>
+                <strong>Three checks</strong>
+                <p>Number Verification, SIM Swap and KYC Match in parallel via CAMARA.</p>
               </div>
               <div style={styles.card}>
                 <span style={styles.cardNum}>3</span>
                 <strong>Trust Score</strong>
-                <p>Allow/Deny y puntuación 0–100 en segundos.</p>
+                <p>Allow/Deny and score 0–100 in seconds.</p>
               </div>
               </div>
             </div>

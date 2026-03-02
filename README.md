@@ -1,167 +1,167 @@
-# TrustGate — Verificación de Identidad Instantánea por Red Telecom
+# TrustGate — Instant Identity Verification via Telecom Network
 
-> El KYC del futuro no pide documentos. Pregunta a la red.
+> The KYC of the future does not ask for documents. Ask the network.
 
-API + dashboard en una sola app Next.js: verificación de identidad en &lt; 2 segundos usando datos de la red telecom (CAMARA / Nokia Network as Code): **Number Verification**, **SIM Swap** y **KYC Match**. Sin documentos, sin fricción.
+API + dashboard in a single Next.js app: identity verification in &lt; 2 seconds using telecom network data (CAMARA / Nokia Network as Code): **Number Verification**, **SIM Swap** and **KYC Match**. No documents, no friction.
 
-📐 **[Diagrama de arquitectura](docs/ARCHITECTURE.md)** — diagramas Mermaid para pitch técnico (flujo, datos, trust score).
+📐 **[Architecture diagram](docs/ARCHITECTURE.md)** — Mermaid diagrams for technical pitch (flow, data, trust score).
 
-- **Plataforma:** una app Next.js (frontend + API) desplegada con **Firebase App Hosting**
-- **Base de datos:** Firestore  
-- **Deploy:** un solo comando (`firebase deploy`); un único build de TS → front y back desde los mismos artefactos.
+- **Platform:** one Next.js app (frontend + API) deployed with **Firebase App Hosting**
+- **Database:** Firestore  
+- **Deploy:** single command (`firebase deploy`); one TS build → front and back from the same artifacts.
 
-**Proyecto configurado:** Open Gateway Hackathon-512 — Project ID `openg-hack26bar-512` (number 243016898355).
+**Configured project:** Open Gateway Hackathon-512 — Project ID `openg-hack26bar-512` (number 243016898355).
 
 ---
 
-## Requisitos
+## Requirements
 
 - Node.js 18+
-- [Firebase CLI](https://firebase.google.com/docs/cli) 14.4+ (para deploy desde fuente a App Hosting)
-- Proyecto en plan **Blaze** (para Firebase App Hosting)
-- Cuenta en [Nokia Network as Code](https://networkascode.nokia.io/) (opcional; sin API key se usan mocks)
+- [Firebase CLI](https://firebase.google.com/docs/cli) 14.4+ (for deploy from source to App Hosting)
+- Project on **Blaze** plan (for Firebase App Hosting)
+- Account on [Nokia Network as Code](https://networkascode.nokia.io/) (optional; without API key mocks are used)
 
 ---
 
-## Setup rápido
+## Quick setup
 
-### 1. Clonar e instalar
+### 1. Clone and install
 
 ```bash
 cd trustgate
 npm install
 ```
 
-### 2. Proyecto Firebase
+### 2. Firebase project
 
-El proyecto por defecto está en `.firebaserc`: **Open Gateway Hackathon-512** (`openg-hack26bar-512`). Para otro proyecto:
+The default project is in `.firebaserc`: **Open Gateway Hackathon-512** (`openg-hack26bar-512`). For another project:
 
 ```bash
-firebase use <tu-project-id>
+firebase use <your-project-id>
 ```
 
-Activa **Firestore** en [Firebase Console](https://console.firebase.google.com/project/openg-hack26bar-512).
+Enable **Firestore** in [Firebase Console](https://console.firebase.google.com/project/openg-hack26bar-512).
 
-### 3. Crear un backend de App Hosting (una vez)
+### 3. Create an App Hosting backend (once)
 
-En [Firebase Console](https://console.firebase.google.com/project/openg-hack26bar-512/apphosting) → **App Hosting** → **Create backend** (o **Get started**).
+In [Firebase Console](https://console.firebase.google.com/project/openg-hack26bar-512/apphosting) → **App Hosting** → **Create backend** (or **Get started**).
 
-- **App’s root directory:** `/` (raíz del repo) o el path donde está `package.json`.
-- **Live branch:** p. ej. `main`.
-- Opcional: conectar un repo de GitHub para rollouts automáticos.
+- **App's root directory:** `/` (repo root) or the path where `package.json` is.
+- **Live branch:** e.g. `main`.
+- Optional: connect a GitHub repo for automatic rollouts.
 
-Anota el **Backend ID** que te asigne (p. ej. `trustgate`). Si no coincide con el de `firebase.json`, edita `firebase.json` → `apphosting[0].backendId`.
+Note the **Backend ID** assigned (e.g. `trustgate`). If it does not match the one in `firebase.json`, edit `firebase.json` → `apphosting[0].backendId`.
 
-Alternativa por CLI:
+CLI alternative:
 
 ```bash
 firebase apphosting:backends:create --project openg-hack26bar-512
 ```
 
-y luego pon el `backendId` devuelto en `firebase.json`.
+then put the returned `backendId` in `firebase.json`.
 
-### 4. Variables de entorno
+### 4. Environment variables
 
-- **Local:** copia `.env.example` a `.env.local` y rellena (mínimo `GOOGLE_CLOUD_PROJECT`; opcional `FIREBASE_SERVICE_ACCOUNT_JSON`, `NAC_API_KEY`).
-- **App Hosting:** en `apphosting.yaml` están las variables de **build** (BUILD) y **runtime** (RUNTIME). `GOOGLE_CLOUD_PROJECT` y `NEXT_PUBLIC_API_URL` están definidas para que el build de Next.js no falle por variables faltantes. Para secrets (p. ej. `NAC_API_KEY`), usa [Cloud Secret Manager](https://firebase.google.com/docs/app-hosting/configure#store-and-access-secret-parameters) y referencias en `apphosting.yaml`, o configúralos en Firebase Console → App Hosting → tu backend → Environment.
-- **Firestore desde la app desplegada:** la app en App Hosting usa Application Default Credentials (sin service account key). El servicio de Cloud Run debe tener el rol **Cloud Datastore User** en el proyecto. Ver [docs/IAM-FIRESTORE-APP-HOSTING.md](docs/IAM-FIRESTORE-APP-HOSTING.md) y `./scripts/grant-apphosting-firestore.sh`.
+- **Local:** copy `.env.example` to `.env.local` and fill in (minimum `GOOGLE_CLOUD_PROJECT`; optional `FIREBASE_SERVICE_ACCOUNT_JSON`, `NAC_API_KEY`).
+- **App Hosting:** in `apphosting.yaml` the **build** (BUILD) and **runtime** (RUNTIME) variables are defined. `GOOGLE_CLOUD_PROJECT` and `NEXT_PUBLIC_API_URL` are set so the Next.js build does not fail on missing variables. For secrets (e.g. `NAC_API_KEY`), use [Cloud Secret Manager](https://firebase.google.com/docs/app-hosting/configure#store-and-access-secret-parameters) and references in `apphosting.yaml`, or configure them in Firebase Console → App Hosting → your backend → Environment.
+- **Firestore from deployed app:** the app on App Hosting uses Application Default Credentials (no service account key). The Cloud Run service must have the **Cloud Datastore User** role on the project. See [docs/IAM-FIRESTORE-APP-HOSTING.md](docs/IAM-FIRESTORE-APP-HOSTING.md) and `./scripts/grant-apphosting-firestore.sh`.
 
 ---
 
-## Desarrollo local
+## Local development
 
 ```bash
 npm run dev
 ```
 
-Abre [http://localhost:3000](http://localhost:3000). El dashboard llama a `/api/...` en el mismo origen (misma app).
+Open [http://localhost:3000](http://localhost:3000). The dashboard calls `/api/...` on the same origin (same app).
 
-### Probar todo en local con emuladores
+### Test everything locally with emulators
 
-Para usar **Firestore emulator** (sin tocar producción):
+To use the **Firestore emulator** (without touching production):
 
-1. **Terminal 1** — arranca solo el emulador de Firestore (y la UI de emuladores):
+1. **Terminal 1** — start only the Firestore emulator (and emulator UI):
 
    ```bash
    firebase emulators:start --only firestore
    ```
 
-   Firestore en `localhost:8080`, Emulator UI en `http://localhost:4000`.
+   Firestore at `localhost:8080`, Emulator UI at `http://localhost:4000`.
 
-2. **Terminal 2** — arranca la app apuntando al emulador:
+2. **Terminal 2** — start the app pointing at the emulator:
 
    ```bash
    npm run dev:emulator
    ```
 
-   Esto pone `FIRESTORE_EMULATOR_HOST=localhost:8080` y ejecuta `next dev`. La app usa el Firestore emulado; las verificaciones se guardan en local y se consultan por state o verification_id.
+   This sets `FIRESTORE_EMULATOR_HOST=localhost:8080` and runs `next dev`. The app uses the emulated Firestore; verifications are stored locally and queried by state or verification_id.
 
-Si prefieres no usar el script, en la segunda terminal:
+If you prefer not to use the script, in the second terminal:
 
 ```bash
 FIRESTORE_EMULATOR_HOST=localhost:8080 npm run dev
 ```
 
-La configuración de emuladores está en `firebase.json` → `emulators` (firestore en 8080, UI en 4000, `singleProjectMode: true`).
+Emulator configuration is in `firebase.json` → `emulators` (firestore on 8080, UI on 4000, `singleProjectMode: true`).
 
 ---
 
 ## Deploy (Firebase App Hosting + Firestore)
 
-Con el proyecto seleccionado y el backend de App Hosting ya creado:
+With the project selected and the App Hosting backend already created:
 
 ```bash
 npm run deploy
 ```
 
-o:
+or:
 
 ```bash
 firebase deploy
 ```
 
-Esto despliega:
+This deploys:
 
-1. **App Hosting** — sube el código, Cloud Build compila el Next.js (un build de TS para front y API), despliega a Cloud Run y CDN.
-2. **Firestore rules** — actualiza las reglas.
+1. **App Hosting** — uploads code, Cloud Build compiles Next.js (one TS build for front and API), deploys to Cloud Run and CDN.
+2. **Firestore rules** — updates the rules.
 
-La URL de la app aparece en Firebase Console → App Hosting → tu backend (formato tipo `https://<backend-id>--<project-id>.<region>.hosted.app`).
+The app URL appears in Firebase Console → App Hosting → your backend (format like `https://<backend-id>--<project-id>.<region>.hosted.app`).
 
 ---
 
-## Contrato del API
+## API contract
 
-Misma app = mismo dominio; las rutas de API son relativas. **Cada petición trata una sola verificación:** no hay listados; se consulta por identificador (state o verification_id).
+Same app = same domain; API routes are relative. **Each request handles a single verification:** there are no list endpoints; you query by identifier (state or verification_id).
 
-### Flujo de verificación
+### Verification flow
 
-1. **Iniciar** — `POST /api/v1/verifications/initiate` con subject, redirect_uri, etc. Respuesta: `authorization_url` y `verification_id` (usado como OAuth state).
-2. **Redirect** — El usuario abre `authorization_url` y completa el flujo en el operador. Vuelve a tu `redirect_uri` con `state` y `verification_id` en la URL (state = verification_id).
-3. **Resultado** — El callback actualiza el mismo registro en Firestore (status: pending → approved/denied). Para obtenerlo: `GET` por `state` (verification_id) o por `verification_id`.
+1. **Initiate** — `POST /api/v1/verifications/initiate` with subject, redirect_uri, etc. Response: `authorization_url` and `verification_id` (used as OAuth state).
+2. **Redirect** — User opens `authorization_url` and completes the flow at the operator. Returns to your `redirect_uri` with `state` and `verification_id` in the URL (state = verification_id).
+3. **Result** — The callback updates the same record in Firestore (status: pending → approved/denied). To fetch it: `GET` by `state` (verification_id) or by `verification_id`.
 
 ### POST /api/v1/verifications/initiate
 
-Inicia **una** verificación: guarda la petición y devuelve el enlace de autorización. Body de ejemplo:
+Starts **one** verification: saves the request and returns the authorization link. Example body:
 
 ```json
 {
   "subject": { "phone_number": "+34XXXXXXXXX", "country": "ES" },
-  "redirect_uri": "https://tu-app/dashboard",
+  "redirect_uri": "https://your-app/dashboard",
   "claims": { "given_name": "Ada", "family_name": "Lovelace", "date_of_birth": "1995-05-10" },
   "checks": ["number_verification", "sim_swap", "kyc_match"],
   "policy": { "min_trust_score": 75, "sim_swap_max_age_hours": 72 }
 }
 ```
 
-**Respuesta:** `authorization_url`, `verification_id` (usado como state en el redirect y al consultar), `message`. Sin listados ni límites; una petición = un proceso de verificación.
+**Response:** `authorization_url`, `verification_id` (used as state on redirect and when querying), `message`. No lists or limits; one request = one verification process.
 
 ### GET /api/v1/completed-verifications?state=&lt;verification_id&gt;
 
-Devuelve **la** verificación para esa petición. **Requerido:** query `state` (el `verification_id` devuelto en initiate). Respuesta: un único objeto de verificación (campos completos). Sin `state` responde 400.
+Returns **the** verification for that request. **Required:** query `state` (the `verification_id` returned from initiate). Response: single verification object (full fields). Without `state` returns 400.
 
 ### GET /api/v1/completed-verifications/:id
 
-Devuelve **una** verificación completada por `verification_id` (path). Un único objeto de verificación. No hay endpoint de listado; solo consulta por ID (state o verification_id).
+Returns **one** completed verification by `verification_id` (path). Single verification object. There is no list endpoint; only query by ID (state or verification_id).
 
 ### GET /api/health
 
@@ -169,16 +169,16 @@ Health check.
 
 ---
 
-## Estructura del repo
+## Repo structure
 
 ```
 trustgate/
 ├── app/                 # Next.js App Router
 │   ├── layout.tsx       # Layout + globals
 │   ├── page.tsx         # Landing
-│   ├── dashboard/       # Formulario verificación + Trust Score
-│   ├── history/         # Consultar una verificación por verification_id o state
-│   └── api/             # API: health, verification/initiate, completed-verifications (por state o :id)
+│   ├── dashboard/       # Verification form + Trust Score
+│   ├── history/         # Look up a verification by verification_id or state
+│   └── api/             # API: health, verification/initiate, completed-verifications (by state or :id)
 ├── lib/                 # firestore, nac (Nokia), trust-score
 ├── apphosting.yaml      # App Hosting: runConfig, env
 ├── firebase.json        # apphosting + firestore
@@ -187,19 +187,19 @@ trustgate/
 └── package.json
 ```
 
-Un único código TypeScript; front y back se sirven desde el mismo despliegue en Firebase App Hosting.
+Single TypeScript codebase; front and back are served from the same deployment on Firebase App Hosting.
 
 ---
 
 ## Nokia Network as Code
 
-Para usar las APIs reales (SIM Swap, Number Verification, KYC Match):
+To use the real APIs (SIM Swap, Number Verification, KYC Match):
 
-- Añade `NAC_API_KEY` (y si aplica `NAC_BASE_URL`) como variable de entorno en App Hosting o como secret en `apphosting.yaml`.
-- Sin `NAC_API_KEY`, el backend usa mocks y el flujo y Trust Score siguen funcionando para demo.
+- Add `NAC_API_KEY` (and if applicable `NAC_BASE_URL`) as an environment variable in App Hosting or as a secret in `apphosting.yaml`.
+- Without `NAC_API_KEY`, the backend uses mocks and the flow and Trust Score still work for demo.
 
 ---
 
-## Licencia
+## License
 
 MIT.

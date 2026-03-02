@@ -45,9 +45,9 @@ export default function HistoryPage() {
     <main style={s.main}>
       <AppHeader />
       <div style={s.content}>
-        <h1 style={s.h1}>Consultar verificación</h1>
+        <h1 style={s.h1}>Consult verification</h1>
         <p style={s.subtitle}>
-          Introduce el <em>verification_id</em> devuelto al iniciar una verificación para ver el resultado.
+          Enter the <em>verification_id</em> provided when you started a verification to view the outcome.
         </p>
 
         <form onSubmit={handleSubmit} style={s.form}>
@@ -57,12 +57,12 @@ export default function HistoryPage() {
               type="text"
               value={verificationId}
               onChange={(e) => setVerificationId(e.target.value)}
-              placeholder="ej. 550e8400-e29b-41d4-a716-446655440000"
+              placeholder="e.g. 550e8400-e29b-41d4-a716-446655440000"
               style={s.input}
             />
           </div>
           <button type="submit" disabled={loading} style={s.button}>
-            {loading ? "Buscando…" : "Buscar"}
+            {loading ? "Searching…" : "Search"}
           </button>
         </form>
 

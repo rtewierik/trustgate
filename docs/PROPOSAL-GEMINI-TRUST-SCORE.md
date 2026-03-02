@@ -9,7 +9,7 @@ This document proposes replacing the current rule-based trust score with a **Gem
 - **Calculation:** `lib/trust-score.ts` — fixed weights: number_verification 35, sim_swap 35, kyc_match 30 (or 15 if low). Decision: `allow` if total ≥ `min_trust_score` (default 75).
 - **Data:** Callback gets `NumberVerificationResult`, `SimSwapResult`, `KycMatchResult` (including `verified_claims` per field: `given_name`, `family_name`, `date_of_birth` → `true` | `false` | `not_available`). No distinction today between “birthdate wrong” vs “name wrong.”
 - **Persistence:** `completeVerification()` writes `trust_score`, `decision`, `check_results` to Firestore; PII is removed after completion.
-- **Frontend:** `VerificationResultCard` shows trust score, decision (Aprobado/Denegado), and check list. Target UIs (from your screenshots) add a **trust dial**, **risk label** (CONFIABLE / ALTO RIESGO), **network signals** with pass/fail/warn, and an **AI analysis** box.
+- **Frontend:** `VerificationResultCard` shows trust score, decision (Approved/Denied), and check list. Target UIs (from your screenshots) add a **trust dial**, **risk label** (LOW RISK / HIGH RISK), **network signals** with pass/fail/warn, and an **AI analysis** box.
 
 ---
 
@@ -37,7 +37,7 @@ interface TrustScoreResponse {
   trust_score: number;
   /** allow | deny */
   decision: "allow" | "deny";
-  /** For UI: CONFIABLE / REVISAR / ALTO RIESGO */
+  /** For UI: LOW RISK / REVIEW / HIGH RISK */
   risk_level: "low" | "medium" | "high";
   /** One-line summary for "Gemini AI Analysis" box */
   summary: string;
@@ -47,7 +47,7 @@ interface TrustScoreResponse {
   checks: Array<{
     name: string;
     status: "pass" | "fail" | "warn";
-    /** Short explanation for this check (e.g. "Sin cambios" / "Número reciclado") */
+    /** Short explanation for this check (e.g. "No changes" / "Recycled number") */
     explanation?: string;
     /** Optional: how much this check affected the score (for transparency) */
     weight_impact?: "critical" | "high" | "medium" | "low" | "none";
@@ -100,7 +100,7 @@ We can add **few-shot examples** (one “allow” and one “deny” with realis
   - `recommendation`
   - `check_results[].detail.explanation` and optionally `weight_impact`
 - **Components:** `VerificationResultCard` (and any new “dashboard” or “verification result” page) should:
-  - Prefer `risk_level` for the label (CONFIABLE / REVISAR / ALTO RIESGO) when present.
+  - Prefer `risk_level` for the label (LOW RISK / REVIEW / HIGH RISK) when present.
   - Show `summary` in the “Gemini AI Analysis” box and `recommendation` as the tag line when present.
   - Render checks from `check_results` with status (pass/fail/warn) and `explanation`; optionally use `weight_impact` for styling or ordering.
 

@@ -19,7 +19,7 @@ export function AppHeader() {
         TrustGate
       </Link>
       <nav style={styles.nav}>
-        <Link href="/history/">Historial</Link>
+        <Link href="/history/">History</Link>
       </nav>
     </header>
   );
