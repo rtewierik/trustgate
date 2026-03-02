@@ -83,7 +83,7 @@ export default function LandingPage() {
       </section>
 
       <footer style={styles.footer}>
-        <p>TrustGate — Open Gateway Hackathon 2026</p>
+        <p>TrustGate — Open Gateway Hackathon 2026 — (Talent Arena MWC Team12)</p>
       </footer>
     </main>
   );

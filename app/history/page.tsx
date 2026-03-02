@@ -17,7 +17,9 @@ export default function HistoryPage() {
   const [verificationId, setVerificationId] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [verification, setVerification] = useState<VerificationResult | null>(null);
+  const [verification, setVerification] = useState<VerificationResult | null>(
+    null,
+  );
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
