@@ -4,6 +4,8 @@
 
 API + dashboard en una sola app Next.js: verificación de identidad en &lt; 2 segundos usando datos de la red telecom (CAMARA / Nokia Network as Code): **Number Verification**, **SIM Swap** y **KYC Match**. Sin documentos, sin fricción.
 
+📐 **[Diagrama de arquitectura](docs/ARCHITECTURE.md)** — diagramas Mermaid para pitch técnico (flujo, datos, trust score).
+
 - **Plataforma:** una app Next.js (frontend + API) desplegada con **Firebase App Hosting**
 - **Base de datos:** Firestore  
 - **Deploy:** un solo comando (`firebase deploy`); un único build de TS → front y back desde los mismos artefactos.
@@ -62,6 +64,7 @@ y luego pon el `backendId` devuelto en `firebase.json`.
 
 - **Local:** copia `.env.example` a `.env.local` y rellena (mínimo `GOOGLE_CLOUD_PROJECT`; opcional `FIREBASE_SERVICE_ACCOUNT_JSON`, `NAC_API_KEY`).
 - **App Hosting:** en `apphosting.yaml` están las variables de **build** (BUILD) y **runtime** (RUNTIME). `GOOGLE_CLOUD_PROJECT` y `NEXT_PUBLIC_API_URL` están definidas para que el build de Next.js no falle por variables faltantes. Para secrets (p. ej. `NAC_API_KEY`), usa [Cloud Secret Manager](https://firebase.google.com/docs/app-hosting/configure#store-and-access-secret-parameters) y referencias en `apphosting.yaml`, o configúralos en Firebase Console → App Hosting → tu backend → Environment.
+- **Firestore desde la app desplegada:** la app en App Hosting usa Application Default Credentials (sin service account key). El servicio de Cloud Run debe tener el rol **Cloud Datastore User** en el proyecto. Ver [docs/IAM-FIRESTORE-APP-HOSTING.md](docs/IAM-FIRESTORE-APP-HOSTING.md) y `./scripts/grant-apphosting-firestore.sh`.
 
 ---
 

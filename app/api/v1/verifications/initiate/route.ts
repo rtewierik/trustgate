@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { getRequestOrigin } from "@/lib/get-request-origin";
 import { createNumberVerificationAuthLink } from "@/lib/nac";
 import {
   saveNumberVerificationRequest,
@@ -79,12 +80,13 @@ export async function POST(request: NextRequest) {
     };
     await saveNumberVerificationRequest(record);
 
+    // Dynamic callback base. Prefer forwarded headers (Cloud Run/App Hosting use X-Forwarded-Host)
     const baseUrl =
       process.env.NEXT_PUBLIC_APP_URL ||
       (process.env.VERCEL_URL
         ? `https://${process.env.VERCEL_URL}`
         : undefined) ||
-      request.nextUrl.origin;
+      getRequestOrigin(request);
     const callbackUrl = `${baseUrl}/api/v1/verifications/number-verification/callback`;
 
     const authorization_url = await createNumberVerificationAuthLink(
