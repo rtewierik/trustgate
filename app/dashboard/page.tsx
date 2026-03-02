@@ -3,17 +3,19 @@
 import { useState, useEffect, useRef, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { VerificationResultCard, type VerificationResultCardData } from "@/components/VerificationResultCard";
 
 const API_BASE = typeof window !== "undefined" ? "" : process.env.NEXT_PUBLIC_API_URL || "";
 const POPUP_NAME = "TrustGateNumberVerification";
 const POPUP_SPEC = "width=480,height=640,scrollbars=yes,resizable=yes";
 
-interface VerificationResult {
+interface VerificationResult extends VerificationResultCardData {
   verification_id: string;
   status: string;
-  trust_score: number;
-  decision: string;
-  checks: Array<{ name: string; status: string; detail?: Record<string, unknown> }>;
+  trust_score?: number;
+  decision?: "allow" | "deny";
+  check_results?: Array<{ name: string; status: string; detail?: Record<string, unknown> }>;
+  checks?: Array<{ name: string; status: string; detail?: Record<string, unknown> }>;
   expires_at: string;
 }
 
@@ -34,33 +36,11 @@ function DashboardContent() {
   const [initiateResult, setInitiateResult] = useState<InitiateResult | null>(null);
   const [result, setResult] = useState<VerificationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [isPopupCloser, setIsPopupCloser] = useState(false);
   const popupRef = useRef<Window | null>(null);
   const pendingStateRef = useRef<string | null>(null);
   const popupCheckIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // When we land in the dashboard with state (e.g. after callback redirect) inside a popup, tell opener and close
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const state = searchParams.get("state");
-    if (!state || !window.opener) return;
-    setIsPopupCloser(true);
-    const origin = window.location.origin;
-    window.opener.postMessage(
-      {
-        type: "NUMBER_VERIFICATION_DONE",
-        state,
-        number_verification: searchParams.get("number_verification"),
-        verification_id: searchParams.get("verification_id"),
-        status: searchParams.get("status"),
-        trust_score: searchParams.get("trust_score"),
-      },
-      origin
-    );
-    window.close();
-  }, [searchParams]);
-
-  // Listen for result from popup
+  // Listen for result from popup: only re-render origin with verification when outcome was successful
   useEffect(() => {
     if (typeof window === "undefined") return;
     const handleMessage = (event: MessageEvent) => {
@@ -72,6 +52,7 @@ function DashboardContent() {
         clearInterval(popupCheckIntervalRef.current);
         popupCheckIntervalRef.current = null;
       }
+      if (data.success !== true) return; // only update origin tab when successful
       setLoading(true);
       fetch(`${API_BASE}/api/v1/completed-verifications?state=${encodeURIComponent(data.state)}`)
         .then((res) => (res.ok ? res.json() : null))
@@ -88,9 +69,8 @@ function DashboardContent() {
     return () => window.removeEventListener("message", handleMessage);
   }, []);
 
-  // When opener has state in URL (e.g. direct navigation), fetch result as before
+  // When dashboard has state in URL (e.g. opened verification-popup in same tab and was redirected), fetch result
   useEffect(() => {
-    if (window.opener) return; // in popup, don't run this
     const state = searchParams.get("state");
     if (!state) return;
     setInitiateResult(null);
@@ -113,8 +93,8 @@ function DashboardContent() {
     try {
       const redirectUri =
         typeof window !== "undefined"
-          ? `${window.location.origin}/dashboard`
-          : `${process.env.NEXT_PUBLIC_API_URL || ""}/dashboard`;
+          ? `${window.location.origin}/dashboard/verification-popup`
+          : `${process.env.NEXT_PUBLIC_API_URL || ""}/dashboard/verification-popup`;
       const res = await fetch(`${API_BASE}/api/v1/verifications/initiate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -160,11 +140,12 @@ function DashboardContent() {
       const state = pendingStateRef.current;
       if (!state) return;
       pendingStateRef.current = null;
+      // Only update origin tab when outcome was successful (e.g. user closed before message; try fetch once)
       setLoading(true);
       fetch(`${API_BASE}/api/v1/completed-verifications?state=${encodeURIComponent(state)}`)
         .then((res) => (res.ok ? res.json() : null))
         .then((verification) => {
-          if (verification) {
+          if (verification && verification.decision === "allow") {
             setResult(verification);
             setInitiateResult(null);
           }
@@ -173,16 +154,6 @@ function DashboardContent() {
         .finally(() => setLoading(false));
     }, 500);
     popupCheckIntervalRef.current = interval;
-  }
-
-  if (isPopupCloser) {
-    return (
-      <main style={styles.main}>
-        <div style={{ ...styles.content, textAlign: "center", paddingTop: "4rem" }}>
-          Cerrando…
-        </div>
-      </main>
-    );
   }
 
   return (
@@ -266,7 +237,7 @@ function DashboardContent() {
           <div style={styles.result}>
             <h2 style={styles.resultTitle}>Siguiente paso: verificación en red</h2>
             <p style={{ marginBottom: "1rem", color: "var(--muted)" }}>
-              Se abrirá una ventana emergente para que el usuario complete la verificación con el operador. Al cerrarla, esta página se actualizará con el resultado.
+              Se abrirá una ventana emergente para que el usuario complete la verificación con el operador. Al cerrarla, esta página se actualizará si la verificación fue exitosa.
             </p>
             <button
               type="button"
@@ -280,23 +251,8 @@ function DashboardContent() {
         )}
 
         {result && (
-          <div style={styles.result}>
-            <h2 style={{ ...styles.resultTitle, color: result.decision === "allow" ? "var(--success)" : "var(--danger)" }}>
-              {result.decision === "allow" ? "✓ Aprobado" : "✗ Denegado"}
-            </h2>
-            <p style={styles.trustScore}>
-              Trust Score: <strong>{result.trust_score}/100</strong>
-            </p>
-            <p style={styles.status}>Estado: {result.status}</p>
-            <ul style={styles.checks}>
-              {result.checks?.map((c) => (
-                <li key={c.name}>
-                  {c.name}: <span style={{ color: c.status === "pass" ? "var(--success)" : "var(--danger)" }}>{c.status}</span>
-                  {c.detail && ` (${JSON.stringify(c.detail)})`}
-                </li>
-              ))}
-            </ul>
-            <p style={styles.muted}>ID: {result.verification_id}</p>
+          <div style={{ marginTop: "2rem" }}>
+            <VerificationResultCard verification={result} showSubject={false} />
           </div>
         )}
       </div>

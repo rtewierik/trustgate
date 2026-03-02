@@ -2,16 +2,14 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { VerificationResultCard, type VerificationResultCardData } from "@/components/VerificationResultCard";
 
 const API_BASE = typeof window !== "undefined" ? "" : process.env.NEXT_PUBLIC_API_URL || "";
 
-interface VerificationResult {
+interface VerificationResult extends VerificationResultCardData {
   verification_id: string;
   status: string;
-  trust_score?: number;
-  decision?: string;
   subject: { phone_number: string; country: string };
-  check_results?: Array<{ name: string; status: string; detail?: Record<string, unknown> }>;
   created_at: string;
   expires_at: string;
 }
@@ -91,28 +89,12 @@ export default function HistoryPage() {
         {error && <div style={styles.error}>{error}</div>}
 
         {verification && (
-          <div style={styles.result}>
-            <h2 style={{ ...styles.resultTitle, color: verification.decision === "allow" ? "var(--success)" : "var(--danger)" }}>
-              {verification.decision === "allow" ? "✓ Aprobado" : "✗ Denegado"}
-            </h2>
-            <p style={styles.trustScore}>
-              Trust Score: <strong>{verification.trust_score ?? "—"}/100</strong>
-            </p>
-            <p style={styles.status}>Estado: {verification.status}</p>
-            <p style={styles.muted}>
-              Teléfono: {verification.subject?.phone_number} · País: {verification.subject?.country}
-            </p>
-            {verification.check_results && verification.check_results.length > 0 && (
-              <ul style={styles.checks}>
-                {verification.check_results.map((c) => (
-                  <li key={c.name}>
-                    {c.name}: <span style={{ color: c.status === "pass" ? "var(--success)" : "var(--danger)" }}>{c.status}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-            <p style={styles.muted}>ID: {verification.verification_id}</p>
-            <p style={styles.muted}>Creado: {verification.created_at ? new Date(verification.created_at).toLocaleString() : "—"}</p>
+          <div style={{ marginTop: "2rem" }}>
+            <VerificationResultCard
+              verification={verification}
+              showSubject={true}
+              showCreatedAt={true}
+            />
           </div>
         )}
       </div>
