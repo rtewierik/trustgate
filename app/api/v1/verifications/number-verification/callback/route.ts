@@ -23,29 +23,20 @@ export async function GET(request: NextRequest) {
   const state = searchParams.get("state");
 
   if (!code || !state) {
-    const errorDescription = searchParams.get("error_description");
-    return NextResponse.json(
-      {
-        error: "Missing code or state",
-        code: "NUMBER_VERIFICATION_CALLBACK_INVALID",
-        message:
-          errorDescription ??
-          "Redirect must include code and state query parameters.",
-      },
-      { status: 400 }
-    );
+    const message =
+      searchParams.get("error_description") ??
+      "Redirect must include code and state query parameters.";
+    const finalOrigin = getRequestOrigin(request);
+    const redirectUrl = `${finalOrigin}/dashboard/verification-popup?error_message=${encodeURIComponent(message)}`;
+    return NextResponse.redirect(redirectUrl);
   }
 
   const record = await getNumberVerificationRequest(state);
   if (!record) {
-    return NextResponse.json(
-      {
-        error: "Verification request not found",
-        code: "NUMBER_VERIFICATION_NOT_FOUND",
-        message: "The request ID (state) is invalid or expired.",
-      },
-      { status: 404 }
-    );
+    const message = "The request ID (state) is invalid or expired.";
+    const finalOrigin = getRequestOrigin(request);
+    const redirectUrl = `${finalOrigin}/dashboard/verification-popup?error_message=${encodeURIComponent(message)}&state=${encodeURIComponent(state)}`;
+    return NextResponse.redirect(redirectUrl);
   }
 
   if (record.status !== "pending") {
@@ -145,11 +136,10 @@ export async function GET(request: NextRequest) {
 
     const finalOrigin = getRequestOrigin(request);
     const redirectUrl = new URL(
-      record.redirect_uri ?? `${finalOrigin}/dashboard`
+      record.redirect_uri ?? `${finalOrigin}/dashboard/verification-popup`
     );
-    redirectUrl.searchParams.set("number_verification", "error");
     redirectUrl.searchParams.set("state", state);
-    redirectUrl.searchParams.set("detail", message);
+    redirectUrl.searchParams.set("error_message", message);
 
     return NextResponse.redirect(redirectUrl.toString());
   }

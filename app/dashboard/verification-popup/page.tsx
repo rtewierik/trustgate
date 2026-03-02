@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 
 const API_BASE = typeof window !== "undefined" ? "" : process.env.NEXT_PUBLIC_API_URL || "";
@@ -40,13 +40,51 @@ const styles: Record<string, React.CSSProperties> = {
     color: "var(--muted)",
     margin: 0,
   },
+  errorMessage: {
+    fontSize: "1rem",
+    color: "var(--danger)",
+    margin: 0,
+    marginBottom: "1rem",
+    maxWidth: "360px",
+  },
 };
 
 function VerificationPopupContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const state = searchParams.get("state");
+  const errorMessage = searchParams.get("error_message");
   const [outcome, setOutcome] = useState<"loading" | "success" | "failure">("loading");
+
+  // Error from callback redirect: notify opener once, show message and tell user to close and retry
+  const errorNotifiedRef = useRef(false);
+  if (errorMessage && typeof window !== "undefined" && window.opener && !errorNotifiedRef.current) {
+    errorNotifiedRef.current = true;
+    window.opener.postMessage(
+      { type: "NUMBER_VERIFICATION_DONE", state: state ?? undefined, success: false },
+      window.location.origin
+    );
+  }
+
+  if (errorMessage) {
+    return (
+      <main style={styles.main}>
+        <div style={styles.wrapper}>
+          <div
+            style={{
+              ...styles.iconCircle,
+              ...styles.iconFailure,
+            }}
+          >
+            ✗
+          </div>
+          <p style={styles.message}>Something went wrong.</p>
+          <p style={styles.errorMessage}>{errorMessage}</p>
+          <p style={styles.hint}>Close this window and retry.</p>
+        </div>
+      </main>
+    );
+  }
 
   useEffect(() => {
     if (typeof window === "undefined" || !state) return;
