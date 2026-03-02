@@ -6,50 +6,44 @@ TrustGate is an identity verification solution that uses **telecom network data*
 
 ## High-level architecture
 
+One verification flow in three phases. **Platform** = your app + TrustGate + Firestore. **Nokia** = Network as Code (operator auth, SIM swap, KYC). Eyes follow top → down; phases are color-coded.
+
 ```mermaid
 flowchart TB
-  subgraph Client["Client / Your app"]
-    UI[Web or mobile UI]
+  subgraph PHASE1["1. Init — create request & auth link"]
+    direction LR
+    P1A[Client: POST /initiate]
+    P1B[TrustGate: save to Firestore]
+    P1C[Nokia: create auth link]
+    P1D[TrustGate: return auth_url + state]
+    P1A --> P1B --> P1C --> P1D
   end
 
-  subgraph TrustGate["TrustGate (Next.js)"]
-    API[API routes]
-    Init[POST /v1/verifications/initiate]
-    Callback[GET .../number-verification/callback]
-    Completed[GET /v1/completed-verifications]
-    API --> Init
-    API --> Callback
-    API --> Completed
+  subgraph PHASE2["2. Number verification — user at operator"]
+    direction LR
+    P2A[User opens auth_url]
+    P2B[Nokia: user verifies device]
+    P2C[Nokia redirects to callback with code]
+    P2A --> P2B --> P2C
   end
 
-  subgraph Firebase["Firebase"]
-    Firestore[(Firestore)]
-    Firestore --> Req[number_verification_requests]
-    Firestore --> Ver[verifications]
+  subgraph PHASE3["3. Callback & result — checks + decision"]
+    direction LR
+    P3A[Callback: load request, verify number with Nokia]
+    P3B[Nokia: SIM swap + KYC]
+    P3C[TrustGate: trust score, save verification]
+    P3D[Redirect user; Client GET /completed-verifications]
+    P3A --> P3B --> P3C --> P3D
   end
 
-  subgraph NAC["Nokia Network as Code (CAMARA)"]
-    Auth[Authorization / Number Verification]
-    SimSwap[SIM Swap API]
-    KYC[KYC Match API]
-  end
+  PHASE1 ==> PHASE2 ==> PHASE3
 
-  UI -->|"1. Initiate (subject, redirect_uri)"| Init
-  Init -->|Store request| Req
-  Init -->|authorization_url + state| UI
-  UI -->|"2. User opens authorization_url"| Auth
-  Auth -->|"3. Redirect with code + state"| Callback
-  Callback -->|Load request| Req
-  Callback -->|Number verify| Auth
-  Callback -->|SIM swap + KYC| SimSwap
-  Callback -->|SIM swap + KYC| KYC
-  Callback -->|Save result| Ver
-  Callback -->|Update request| Req
-  Callback -->|Redirect user| UI
-  UI -->|"4. Get result (state or id)"| Completed
-  Completed -->|Read| Req
-  Completed -->|Read| Ver
+  style PHASE1 fill:#E3F2FD,stroke:#1976D2
+  style PHASE2 fill:#E8F5E9,stroke:#388E3C
+  style PHASE3 fill:#FFF3E0,stroke:#F57C00
 ```
+
+**Platform vs Nokia:** In **Init**, TrustGate calls Nokia to obtain the `authorization_url`. In **Number verification**, the user interacts only with Nokia; Nokia then redirects to TrustGate. In **Callback & result**, TrustGate calls Nokia for number verification, SIM swap, and KYC, then decides and persists the result.
 
 **Deployment:** TrustGate runs as a single Next.js app on **Firebase App Hosting** (Cloud Run + CDN). Firestore holds request state and completed verifications. No document storage; no separate backend service.
 
