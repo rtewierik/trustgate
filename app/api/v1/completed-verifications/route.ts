@@ -44,5 +44,6 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     ...verification,
     verified: verification.decision === "allow",
+    ...(verification.error != null && { error_message: verification.error }),
   });
 }

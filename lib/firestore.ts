@@ -36,8 +36,10 @@ export const PENDING_VERIFICATION_TTL_MINUTES = 5;
 
 export interface VerificationRecord {
   verification_id: string;
-  subject: { phone_number: string; country: string };
-  claims: Record<string, string>;
+  /** PII: present only while status is "pending"; removed when transitioning to approved/denied. */
+  subject?: { phone_number: string; country: string };
+  /** PII: present only while status is "pending"; removed when transitioning to approved/denied. */
+  claims?: Record<string, string>;
   checks: string[];
   policy: { min_trust_score: number; sim_swap_max_age_hours?: number };
   status: "pending" | "approved" | "denied";
@@ -52,7 +54,7 @@ export interface VerificationRecord {
   created_at: string;
   /** Set in callback when status moves to approved/denied. */
   completed_at?: string;
-  /** Set in callback on failure (e.g. NAC error). */
+  /** Set in callback on failure. Must be sanitized (no PII). */
   error?: string;
   metadata?: Record<string, string>;
 }
@@ -78,27 +80,31 @@ export async function getVerification(verificationId: string): Promise<Verificat
   return raw as unknown as VerificationRecord;
 }
 
-export async function updateVerification(
+/**
+ * Transition a verification from pending to approved/denied: write completion fields
+ * and remove PII (subject, claims) from the document.
+ */
+export async function completeVerification(
   verificationId: string,
-  update: Partial<
-    Pick<
-      VerificationRecord,
-      | "status"
-      | "trust_score"
-      | "decision"
-      | "check_results"
-      | "completed_at"
-      | "error"
-      | "expires_at"
-    >
-  >
+  update: Pick<
+    VerificationRecord,
+    "status" | "trust_score" | "decision" | "check_results" | "completed_at" | "expires_at"
+  > & { error?: string }
 ): Promise<void> {
   const db = getFirestore();
-  const withExpiresAt: Record<string, unknown> = { ...update };
-  if (Object.prototype.hasOwnProperty.call(update, "expires_at")) {
-    const val = update.expires_at;
-    withExpiresAt.expires_at =
-      val === null || val === undefined ? null : admin.firestore.Timestamp.fromDate(new Date(val));
-  }
-  await db.collection(VERIFICATIONS_COLLECTION).doc(verificationId).update(withExpiresAt);
+  const payload: Record<string, unknown> = {
+    status: update.status,
+    trust_score: update.trust_score,
+    decision: update.decision,
+    check_results: update.check_results,
+    completed_at: update.completed_at,
+    expires_at:
+      update.expires_at == null
+        ? null
+        : admin.firestore.Timestamp.fromDate(new Date(update.expires_at)),
+    ...(update.error != null && update.error !== "" && { error: update.error }),
+  };
+  payload.subject = admin.firestore.FieldValue.delete();
+  payload.claims = admin.firestore.FieldValue.delete();
+  await db.collection(VERIFICATIONS_COLLECTION).doc(verificationId).update(payload);
 }

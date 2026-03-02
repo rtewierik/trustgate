@@ -2,10 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getRequestOrigin } from "@/lib/get-request-origin";
 import { numberVerification, simSwap, kycMatch } from "@/lib/nac";
 import { computeTrustScore } from "@/lib/trust-score";
-import {
-  getVerification,
-  updateVerification,
-} from "@/lib/firestore";
+import { getVerification, completeVerification } from "@/lib/firestore";
+import { sanitizeErrorMessage, sanitizeCheckResults } from "@/lib/sanitize-pii";
 
 // https://trustgate--openg-hack26bar-512.us-central1.hosted.app/api/v1/verifications/number-verification/callback?state=nv_mm9dys88_21f063ab&error=invalid_request&error_description=Unknown%20device
 
@@ -21,9 +19,10 @@ export async function GET(request: NextRequest) {
   const state = searchParams.get("state");
 
   if (!code || !state) {
-    const message =
+    const rawMessage =
       searchParams.get("error_description") ??
       "Redirect must include code and state query parameters.";
+    const message = sanitizeErrorMessage(rawMessage);
     const finalOrigin = getRequestOrigin(request);
     const redirectUrl = `${finalOrigin}/demo/verification-popup?error_message=${encodeURIComponent(message)}`;
     return NextResponse.redirect(redirectUrl);
@@ -31,7 +30,7 @@ export async function GET(request: NextRequest) {
 
   const record = await getVerification(state);
   if (!record) {
-    const message = "The request ID (state) is invalid or expired.";
+    const message = sanitizeErrorMessage("The request ID (state) is invalid or expired.");
     const finalOrigin = getRequestOrigin(request);
     const redirectUrl = `${finalOrigin}/demo/verification-popup?error_message=${encodeURIComponent(message)}&state=${encodeURIComponent(state)}`;
     return NextResponse.redirect(redirectUrl);
@@ -48,9 +47,17 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(redirectUrl.toString());
   }
 
-  const phoneNumber = record.subject.phone_number;
-  const country = record.subject.country;
-  const { claims, checks, policy, metadata } = record;
+  const subject = record.subject;
+  if (!subject) {
+    const message = sanitizeErrorMessage("Verification data incomplete.");
+    const finalOrigin = getRequestOrigin(request);
+    const redirectUrl = `${finalOrigin}/demo/verification-popup?error_message=${encodeURIComponent(message)}&state=${encodeURIComponent(state)}`;
+    return NextResponse.redirect(redirectUrl);
+  }
+  const phoneNumber = subject.phone_number;
+  const country = subject.country;
+  const claims = record.claims ?? {};
+  const { checks, policy } = record;
 
   try {
     const numVer = await numberVerification(phoneNumber, country, {
@@ -76,15 +83,17 @@ export async function GET(request: NextRequest) {
 
     const status = decision === "allow" ? "approved" : "denied";
     const now = new Date();
+    const sanitizedCheckResults = sanitizeCheckResults(checkResults);
+    const sanitizedError = numVer.detail ? sanitizeErrorMessage(numVer.detail) : undefined;
 
-    await updateVerification(state, {
+    await completeVerification(state, {
       status,
       trust_score,
       decision,
-      check_results: checkResults,
+      check_results: sanitizedCheckResults,
       completed_at: now.toISOString(),
       expires_at: null,
-      ...(numVer.detail && { error: numVer.detail }),
+      ...(sanitizedError && { error: sanitizedError }),
     });
 
     const finalOrigin = getRequestOrigin(request);
@@ -99,15 +108,19 @@ export async function GET(request: NextRequest) {
     redirectUrl.searchParams.set("verification_id", record.verification_id);
     redirectUrl.searchParams.set("status", status);
     redirectUrl.searchParams.set("trust_score", String(trust_score));
-    if (numVer.detail)
-      redirectUrl.searchParams.set("detail", numVer.detail);
+    if (sanitizedError)
+      redirectUrl.searchParams.set("detail", sanitizedError);
 
     return NextResponse.redirect(redirectUrl.toString());
   } catch (err) {
     console.error("[NAC] number-verification callback error:", err);
-    const message = err instanceof Error ? err.message : "Unknown error";
-    await updateVerification(state, {
+    const rawMessage = err instanceof Error ? err.message : "Unknown error";
+    const message = sanitizeErrorMessage(rawMessage);
+    await completeVerification(state, {
       status: "denied",
+      trust_score: 0,
+      decision: "deny",
+      check_results: [],
       completed_at: new Date().toISOString(),
       expires_at: null,
       error: message,
