@@ -124,9 +124,9 @@ This keeps a **single contract:** the backend stores and returns the same JSON t
 - **Usage:** When calling Gemini, optionally append to the user prompt a “Recent corrections” section: e.g. last N feedback items (anonymised), e.g. “For cases like [summary of checks], the correct outcome was allow/deny because …”. This gives the model **few-shot style** guidance from real human corrections.
 - **Implementation:** In `computeTrustScoreWithGemini`, if a flag like `INCLUDE_FEEDBACK_IN_PROMPT=true`, query the last K feedback documents (ordered by `created_at`), format them as neutral examples (no PII), and add them to the prompt. This is **extensible**: we can later filter by product, policy, or reviewer.
 
-### 7.2 Option B — Context caching (cost/performance only)
+### 7.2 Option B — Context caching (implemented)
 
-- Use Gemini’s **context caching** to cache the system prompt and schema so repeated calls are cheaper and slightly faster. This does **not** add memory of past decisions; it only reuses the same prefix.
+- **Implemented.** Gemini’s **context caching** is used to cache the system prompt. The first request creates a cache (TTL 1 hour); subsequent requests send only the variable user prompt and reference the cache, reducing time-to-first-token (TTFT) and cost (cached tokens at a discount). Controlled by `GEMINI_USE_CONTEXT_CACHE` (default: true). This does **not** add memory of past decisions; it only reuses the same prefix.
 
 ### 7.3 Option C — Fine-tuning or RLHF (long-term)
 
@@ -174,7 +174,14 @@ This gives you a clear path to a Gemini-driven, consistently renderable trust sc
 
 ---
 
-## 10. Security and PII
+## 10. Speed and latency
+
+- **Context caching (Gemini API):** Enabled by default (`GEMINI_USE_CONTEXT_CACHE=true`). Caches the system prompt so each request only sends the variable input; reduces TTFT and input token cost. No “always-on instance” on our side—each request still hits the API; the cache is on Google’s side.
+- **Vertex AI Provisioned Throughput:** For teams that need **prioritized, lower-latency** inference (e.g. strict SLAs), **Vertex AI** offers [Provisioned Throughput](https://cloud.google.com/vertex-ai/generative-ai/docs/provisioned-throughput/use-provisioned-throughput): you purchase Generative AI Scale Units (GSUs) and requests are serviced before on-demand traffic. This is the closest to “always having an active instance” of the model capacity. Requires using Vertex AI (and GCP auth) instead of the Gemini API with an API key; the app would call Vertex’s Gemini endpoint rather than `apiKey`-based Gemini API.
+
+---
+
+## 11. Security and PII
 
 - **Do not send PII to Gemini.** The callback has `subject` (phone, country) and `claims` (name, DoB) only until we call `completeVerification` (which deletes them). When building the Gemini prompt, send only:
   - Check **outcomes**: e.g. `number_verification.verified`, `sim_swap.swapped`, `sim_swap.last_swap_hours_ago`, `kyc_match.match`, `kyc_match.match_level`, and `kyc_match.verified_claims` as `{ given_name: "true"|"false"|"not_available", ... }` — **not** the actual claim values (no names, no birthdates).

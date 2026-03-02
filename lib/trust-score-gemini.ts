@@ -15,6 +15,12 @@ const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const USE_GEMINI = process.env.USE_GEMINI_TRUST_SCORE === "true";
 const INCLUDE_FEEDBACK = process.env.GEMINI_INCLUDE_FEEDBACK_IN_PROMPT !== "false";
 const RECENT_FEEDBACK_LIMIT = 5;
+const USE_CONTEXT_CACHE = process.env.GEMINI_USE_CONTEXT_CACHE !== "false";
+const CACHE_TTL_SECONDS = 3600; // 1 hour
+
+/** Lazy-initialized context cache name (system prompt). Reused to reduce TTFT. */
+let cachedContentName: string | null = null;
+let cacheInitPromise: Promise<string | null> | null = null;
 
 /** Input payload for Gemini (no PII: only outcomes and policy). */
 export interface TrustScoreGeminiInput {
@@ -104,6 +110,33 @@ function buildUserPrompt(input: TrustScoreGeminiInput, recentFeedbackJson: strin
   return text;
 }
 
+/** Create or reuse a context cache for the system prompt. Returns cache resource name or null on failure. */
+async function getOrCreateContextCache(ai: InstanceType<typeof GoogleGenAI>): Promise<string | null> {
+  if (cachedContentName) return cachedContentName;
+  if (cacheInitPromise) return cacheInitPromise;
+  cacheInitPromise = (async () => {
+    try {
+      const created = await ai.caches.create({
+        model: "gemini-2.5-flash",
+        config: {
+          systemInstruction: { text: SYSTEM_PROMPT },
+          displayName: "trustgate-trust-score",
+          ttl: `${CACHE_TTL_SECONDS}s`,
+        },
+      });
+      const name = created.name ?? null;
+      if (name) cachedContentName = name;
+      return name;
+    } catch (err) {
+      console.warn("[trust-score-gemini] Context cache create failed, using uncached requests:", err);
+      return null;
+    } finally {
+      cacheInitPromise = null;
+    }
+  })();
+  return cacheInitPromise;
+}
+
 /** Extract JSON from model text (strip markdown code block if present). */
 function extractJson(text: string): string {
   const trimmed = text.trim();
@@ -160,14 +193,20 @@ export async function computeTrustScoreWithGemini(
     }
   }
 
+  let cacheName: string | null = null;
   try {
     const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
+    const userPrompt = buildUserPrompt(input, recentFeedbackJson);
+    const useCache = USE_CONTEXT_CACHE;
+    cacheName = useCache ? await getOrCreateContextCache(ai) : null;
+
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
-      contents: [
-        { role: "user", parts: [{ text: SYSTEM_PROMPT + "\n\n" + buildUserPrompt(input, recentFeedbackJson) }] },
-      ],
+      contents: cacheName
+        ? [{ role: "user", parts: [{ text: userPrompt }] }]
+        : [{ role: "user", parts: [{ text: SYSTEM_PROMPT + "\n\n" + userPrompt }] }],
       config: {
+        ...(cacheName && { cachedContent: cacheName }),
         responseMimeType: "application/json",
         temperature: 0.2,
         maxOutputTokens: 4096,
@@ -221,7 +260,8 @@ export async function computeTrustScoreWithGemini(
       recommendation: r.recommendation ?? undefined,
     };
   } catch (err) {
-    console.error("[trust-score-gemini] Error:", err);
+    if (cacheName) cachedContentName = null;
+    console.warn("[trust-score-gemini] Gemini API error, using fallback:", err);
     const fallback = computeTrustScore(numberVerification, simSwap, kycMatch, policy);
     return { ...fallback };
   }
