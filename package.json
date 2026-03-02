@@ -1,0 +1,23 @@
+{
+  "name": "trustgate",
+  "version": "0.1.0",
+  "private": true,
+  "description": "TrustGate — Verificación de Identidad Instantánea por Red Telecom",
+  "scripts": {
+    "build": "npm run build:api && npm run build:web",
+    "build:api": "npm exec -w api next build",
+    "build:web": "npm run build --workspace=apps/web",
+    "dev:api": "npm run dev --workspace=apps/api",
+    "dev:web": "npm run dev --workspace=apps/web",
+    "deploy": "node scripts/deploy.js",
+    "deploy:api": "node scripts/deploy-api.js",
+    "deploy:web": "node scripts/deploy-web.js"
+  },
+  "workspaces": [
+    "apps/api",
+    "apps/web"
+  ],
+  "engines": {
+    "node": ">=18"
+  }
+}
