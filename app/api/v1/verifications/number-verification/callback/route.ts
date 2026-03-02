@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getRequestOrigin } from "@/lib/get-request-origin";
 import { numberVerification, simSwap, kycMatch } from "@/lib/nac";
 import { computeTrustScore } from "@/lib/trust-score";
 import {
@@ -7,6 +8,8 @@ import {
   saveVerification,
   type VerificationRecord,
 } from "@/lib/firestore";
+
+// https://trustgate--openg-hack26bar-512.us-central1.hosted.app/api/v1/verifications/number-verification/callback?state=nv_mm9dys88_21f063ab&error=invalid_request&error_description=Unknown%20device
 
 /**
  * Callback for the number verification redirect flow.
@@ -43,7 +46,7 @@ export async function GET(request: NextRequest) {
   }
 
   if (record.status !== "pending") {
-    const finalOrigin = request.nextUrl.origin;
+    const finalOrigin = getRequestOrigin(request);
     const redirectUrl = new URL(
       record.redirect_uri ?? `${finalOrigin}/dashboard`
     );
@@ -111,7 +114,7 @@ export async function GET(request: NextRequest) {
       verification_id: verificationId,
     });
 
-    const finalOrigin = request.nextUrl.origin;
+    const finalOrigin = getRequestOrigin(request);
     const redirectUrl = new URL(
       record.redirect_uri ?? `${finalOrigin}/dashboard`
     );
@@ -137,7 +140,7 @@ export async function GET(request: NextRequest) {
       error: message,
     });
 
-    const finalOrigin = request.nextUrl.origin;
+    const finalOrigin = getRequestOrigin(request);
     const redirectUrl = new URL(
       record.redirect_uri ?? `${finalOrigin}/dashboard`
     );
