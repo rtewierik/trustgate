@@ -60,8 +60,8 @@ y luego pon el `backendId` devuelto en `firebase.json`.
 
 ### 4. Variables de entorno
 
-- **Local:** crea `.env.local` en la raíz con `GOOGLE_CLOUD_PROJECT=openg-hack26bar-512` (y opcionalmente `FIREBASE_SERVICE_ACCOUNT_JSON`, `NAC_API_KEY`).
-- **App Hosting:** en `apphosting.yaml` está `GOOGLE_CLOUD_PROJECT`. Para secrets (p. ej. `NAC_API_KEY`), usa [Cloud Secret Manager](https://firebase.google.com/docs/app-hosting/configure#store-and-access-secret-parameters) y referencias en `apphosting.yaml`, o configúralos en Firebase Console → App Hosting → tu backend → Environment.
+- **Local:** copia `.env.example` a `.env.local` y rellena (mínimo `GOOGLE_CLOUD_PROJECT`; opcional `FIREBASE_SERVICE_ACCOUNT_JSON`, `NAC_API_KEY`).
+- **App Hosting:** en `apphosting.yaml` están las variables de **build** (BUILD) y **runtime** (RUNTIME). `GOOGLE_CLOUD_PROJECT` y `NEXT_PUBLIC_API_URL` están definidas para que el build de Next.js no falle por variables faltantes. Para secrets (p. ej. `NAC_API_KEY`), usa [Cloud Secret Manager](https://firebase.google.com/docs/app-hosting/configure#store-and-access-secret-parameters) y referencias en `apphosting.yaml`, o configúralos en Firebase Console → App Hosting → tu backend → Environment.
 
 ---
 
