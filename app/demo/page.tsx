@@ -15,6 +15,9 @@ interface VerificationResult extends VerificationResultCardData {
   status: string;
   trust_score?: number;
   decision?: "allow" | "deny";
+  risk_level?: "low" | "medium" | "high";
+  summary?: string;
+  recommendation?: string;
   check_results?: Array<{ name: string; status: string; detail?: Record<string, unknown> }>;
   checks?: Array<{ name: string; status: string; detail?: Record<string, unknown> }>;
 }
@@ -36,6 +39,37 @@ const demoStyles: Record<string, React.CSSProperties> = {
   },
   resultTitle: { color: "var(--success)", marginBottom: "0.5rem" },
   muted: { marginTop: "0.5rem", fontSize: "0.75rem", color: "var(--muted)" },
+  feedbackSection: {
+    marginTop: "1.5rem",
+    padding: "1rem",
+    border: "1px solid var(--border)",
+    borderRadius: "12px",
+    background: "var(--bg)",
+  },
+  feedbackTitle: { fontSize: "0.95rem", fontWeight: 600, marginBottom: "0.75rem" },
+  feedbackButtons: { display: "flex", flexWrap: "wrap", gap: "0.5rem", marginBottom: "0.75rem" },
+  feedbackBtn: {
+    padding: "0.5rem 1rem",
+    borderRadius: "8px",
+    border: "1px solid var(--border)",
+    background: "var(--surface)",
+    cursor: "pointer",
+    fontSize: "0.875rem",
+  },
+  feedbackBtnSuccess: { borderColor: "var(--success)", color: "var(--success)" },
+  feedbackBtnDanger: { borderColor: "var(--danger)", color: "var(--danger)" },
+  feedbackComment: {
+    width: "100%",
+    minHeight: "60px",
+    padding: "0.5rem",
+    borderRadius: "8px",
+    border: "1px solid var(--border)",
+    background: "var(--bg)",
+    fontSize: "0.875rem",
+    marginTop: "0.5rem",
+  },
+  feedbackThankYou: { fontSize: "0.9rem", color: "var(--success)", marginTop: "0.5rem" },
+  newVerificationBtn: { marginTop: "1rem" },
 };
 
 function DemoContent() {
@@ -49,6 +83,9 @@ function DemoContent() {
   const [initiateResult, setInitiateResult] = useState<InitiateResult | null>(null);
   const [result, setResult] = useState<VerificationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [feedbackSent, setFeedbackSent] = useState(false);
+  const [feedbackLoading, setFeedbackLoading] = useState(false);
+  const [feedbackComment, setFeedbackComment] = useState("");
   const popupRef = useRef<Window | null>(null);
   const pendingStateRef = useRef<string | null>(null);
   const popupCheckIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -71,7 +108,6 @@ function DemoContent() {
         clearInterval(popupCheckIntervalRef.current);
         popupCheckIntervalRef.current = null;
       }
-      if (data.success !== true) return;
       setLoading(true);
       fetch(`${API_BASE}/api/v1/completed-verifications?state=${encodeURIComponent(data.state)}`)
         .then((res) => (res.ok ? res.json() : null))
@@ -79,6 +115,7 @@ function DemoContent() {
           if (verification) {
             setResult(verification);
             setInitiateResult(null);
+            setFeedbackSent(false);
           }
         })
         .catch(() => {})
@@ -162,15 +199,46 @@ function DemoContent() {
       fetch(`${API_BASE}/api/v1/completed-verifications?state=${encodeURIComponent(state)}`)
         .then((res) => (res.ok ? res.json() : null))
         .then((verification) => {
-          if (verification && verification.decision === "allow") {
+          if (verification) {
             setResult(verification);
             setInitiateResult(null);
+            setFeedbackSent(false);
           }
         })
         .catch(() => {})
         .finally(() => setLoading(false));
     }, 500);
     popupCheckIntervalRef.current = interval;
+  }
+
+  async function submitFeedback(feedbackType: "correct" | "false_positive" | "false_negative") {
+    if (!result?.verification_id) return;
+    setFeedbackLoading(true);
+    try {
+      const correct_decision =
+        feedbackType === "correct"
+          ? result.decision!
+          : feedbackType === "false_negative"
+            ? "allow"
+            : "deny";
+      const res = await fetch(`${API_BASE}/api/v1/verifications/feedback`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          verification_id: result.verification_id,
+          correct_decision,
+          correct_trust_score: result.trust_score,
+          feedback_type: feedbackType,
+          comment: feedbackComment.trim() || undefined,
+        }),
+      });
+      if (res.ok) setFeedbackSent(true);
+      else setError("No se pudo enviar el feedback");
+    } catch {
+      setError("Error de red al enviar feedback");
+    } finally {
+      setFeedbackLoading(false);
+    }
   }
 
   const s = demoStyles;
@@ -180,7 +248,7 @@ function DemoContent() {
       <div style={s.content}>
         <h1 style={s.h1}>Verificación de identidad</h1>
 
-        {!(result && result.decision === "allow") && (
+        {!result ? (
           <>
             <p style={s.subtitle}>
               Introduce el número y los datos del usuario. La verificación usa Number Verification, SIM Swap y KYC Match.
@@ -247,7 +315,7 @@ function DemoContent() {
               <div ref={nextStepRef} style={s.result}>
                 <h2 style={s.resultTitle}>Siguiente paso: verificación en red</h2>
                 <p style={{ marginBottom: "1rem", color: "var(--muted)" }}>
-                  Se abrirá una ventana emergente para que el usuario complete la verificación con el operador. Al cerrarla, esta página se actualizará si la verificación fue exitosa.
+                  Se abrirá una ventana emergente para que el usuario complete la verificación con el operador. Al cerrarla, esta página se actualizará con el resultado.
                 </p>
                 <button type="button" onClick={openVerificationPopup} style={s.button}>
                   Abrir verificación en ventana emergente
@@ -256,11 +324,62 @@ function DemoContent() {
               </div>
             )}
           </>
-        )}
-
-        {result && (
+        ) : (
           <div style={{ marginTop: "2rem" }}>
             <VerificationResultCard verification={result} showSubject={false} />
+            <div style={s.feedbackSection} role="region" aria-label="Corrección del resultado">
+              <p style={s.feedbackTitle}>¿Fue correcto el resultado?</p>
+              {feedbackSent ? (
+                <p style={s.feedbackThankYou}>Gracias, feedback guardado. Ayudará a mejorar las próximas decisiones.</p>
+              ) : (
+                <>
+                  <div style={s.feedbackButtons}>
+                    <button
+                      type="button"
+                      style={{ ...s.feedbackBtn, ...s.feedbackBtnSuccess }}
+                      onClick={() => submitFeedback("correct")}
+                      disabled={feedbackLoading}
+                    >
+                      Correcto
+                    </button>
+                    <button
+                      type="button"
+                      style={{ ...s.feedbackBtn, ...s.feedbackBtnDanger }}
+                      onClick={() => submitFeedback("false_positive")}
+                      disabled={feedbackLoading}
+                      title="El sistema aprobó pero debería haber denegado"
+                    >
+                      Falso positivo
+                    </button>
+                    <button
+                      type="button"
+                      style={{ ...s.feedbackBtn, ...s.feedbackBtnDanger }}
+                      onClick={() => submitFeedback("false_negative")}
+                      disabled={feedbackLoading}
+                      title="El sistema denegó pero debería haber aprobado"
+                    >
+                      Falso negativo
+                    </button>
+                  </div>
+                  <label style={{ display: "block", fontSize: "0.875rem", color: "var(--muted)", marginTop: "0.5rem" }}>
+                    Comentario (opcional)
+                  </label>
+                  <textarea
+                    style={s.feedbackComment}
+                    placeholder="Ej.: La fecha de nacimiento era correcta en los documentos."
+                    value={feedbackComment}
+                    onChange={(e) => setFeedbackComment(e.target.value)}
+                  />
+                </>
+              )}
+            </div>
+            <button
+              type="button"
+              style={{ ...s.button, ...s.newVerificationBtn }}
+              onClick={() => { setResult(null); setError(null); setFeedbackSent(false); setFeedbackComment(""); }}
+            >
+              Nueva verificación
+            </button>
           </div>
         )}
       </div>

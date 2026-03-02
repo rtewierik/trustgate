@@ -11,6 +11,12 @@ export interface VerificationResultCardData {
   status: string;
   trust_score?: number;
   decision?: "allow" | "deny";
+  /** risk_level from Gemini: low = CONFIABLE, medium = REVISAR, high = ALTO RIESGO */
+  risk_level?: "low" | "medium" | "high";
+  /** One-line AI summary */
+  summary?: string;
+  /** Optional recommendation (e.g. "REVIEW due to recent SIM swap") */
+  recommendation?: string;
   /** Check results (from API as check_results or checks; may be array or object) */
   check_results?: VerificationCheckItem[] | Record<string, VerificationCheckItem>;
   checks?: VerificationCheckItem[] | Record<string, VerificationCheckItem> | string[];
@@ -92,6 +98,23 @@ const cardStyles: Record<string, React.CSSProperties> = {
     fontSize: "0.9rem",
     color: "var(--danger)",
   },
+  riskLevel: { fontSize: "1rem", fontWeight: 600, marginBottom: "0.25rem" },
+  summary: {
+    marginTop: "0.75rem",
+    padding: "0.75rem",
+    background: "rgba(0,0,0,0.15)",
+    borderRadius: "8px",
+    fontSize: "0.9rem",
+    color: "var(--text)",
+    borderLeft: "3px solid var(--accent)",
+  },
+  recommendation: {
+    marginTop: "0.5rem",
+    fontSize: "0.875rem",
+    color: "var(--muted)",
+    fontStyle: "italic",
+  },
+  checkExplanation: { marginLeft: "0.5rem", color: "var(--muted)", fontSize: "0.85em" },
 };
 
 export function VerificationResultCard({
@@ -140,6 +163,25 @@ export function VerificationResultCard({
 
       {!verification.error_message && (
         <>
+          {verification.risk_level != null && (
+            <p
+              style={{
+                ...cardStyles.riskLevel,
+                color:
+                  verification.risk_level === "low"
+                    ? "var(--success)"
+                    : verification.risk_level === "high"
+                      ? "var(--danger)"
+                      : "var(--accent)",
+              }}
+            >
+              {verification.risk_level === "low"
+                ? "CONFIABLE"
+                : verification.risk_level === "high"
+                  ? "ALTO RIESGO"
+                  : "REVISAR"}
+            </p>
+          )}
           {verification.trust_score != null && (
             <p style={cardStyles.trustScore}>
               Trust Score: <strong>{verification.trust_score}/100</strong>
@@ -147,19 +189,37 @@ export function VerificationResultCard({
           )}
           <p style={cardStyles.status}>Estado: {verification.status}</p>
 
+          {verification.summary != null && verification.summary !== "" && (
+            <div style={cardStyles.summary} role="region" aria-label="AI analysis">
+              {verification.summary}
+            </div>
+          )}
+          {verification.recommendation != null && verification.recommendation !== "" && (
+            <p style={cardStyles.recommendation}>{verification.recommendation}</p>
+          )}
+
           {checks.length > 0 && (
             <ul style={cardStyles.checks}>
               {checks.map((c) => (
                 <li key={c.name} style={cardStyles.checkItem}>
-                  {c.name}:{" "}
                   <span
                     style={{
-                      color: c.status === "pass" ? "var(--success)" : "var(--danger)",
+                      color:
+                        c.status === "pass"
+                          ? "var(--success)"
+                          : c.status === "warn"
+                            ? "var(--accent)"
+                            : "var(--danger)",
                     }}
                   >
-                    {c.status}
+                    {c.status === "pass" ? "✔" : c.status === "warn" ? "⚠" : "✗"} {c.name}
                   </span>
-                  {c.detail && !compact && ` (${JSON.stringify(c.detail)})`}
+                  {!compact && c.detail?.explanation != null && (
+                    <span style={cardStyles.checkExplanation}> — {String(c.detail.explanation)}</span>
+                  )}
+                  {!compact && c.detail && !("explanation" in c.detail) && Object.keys(c.detail).length > 0 && (
+                    <span style={cardStyles.checkExplanation}> ({JSON.stringify(c.detail)})</span>
+                  )}
                 </li>
               ))}
             </ul>

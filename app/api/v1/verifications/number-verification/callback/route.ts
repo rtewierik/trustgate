@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getRequestOrigin } from "@/lib/get-request-origin";
 import { numberVerification, simSwap, kycMatch } from "@/lib/nac";
-import { computeTrustScore } from "@/lib/trust-score";
+import { computeTrustScoreWithGemini } from "@/lib/trust-score-gemini";
 import { getVerification, completeVerification } from "@/lib/firestore";
 import { sanitizeErrorMessage, sanitizeCheckResults } from "@/lib/sanitize-pii";
 
@@ -74,25 +74,28 @@ export async function GET(request: NextRequest) {
         : Promise.resolve({ match: true, match_level: "high" as const }),
     ]);
 
-    const { trust_score, checks: checkResults, decision } = computeTrustScore(
+    const result = await computeTrustScoreWithGemini(
       numVer,
       simSwapRes,
       kycRes,
       policy
     );
 
-    const status = decision === "allow" ? "approved" : "denied";
+    const status = result.decision === "allow" ? "approved" : "denied";
     const now = new Date();
-    const sanitizedCheckResults = sanitizeCheckResults(checkResults);
+    const sanitizedCheckResults = sanitizeCheckResults(result.checks);
     const sanitizedError = numVer.detail ? sanitizeErrorMessage(numVer.detail) : undefined;
 
     await completeVerification(state, {
       status,
-      trust_score,
-      decision,
+      trust_score: result.trust_score,
+      decision: result.decision,
       check_results: sanitizedCheckResults,
       completed_at: now.toISOString(),
       expires_at: null,
+      ...(result.risk_level != null && { risk_level: result.risk_level }),
+      ...(result.summary != null && result.summary !== "" && { summary: result.summary }),
+      ...(result.recommendation != null && result.recommendation !== "" && { recommendation: result.recommendation }),
       ...(sanitizedError && { error: sanitizedError }),
     });
 
@@ -107,7 +110,7 @@ export async function GET(request: NextRequest) {
     redirectUrl.searchParams.set("state", state);
     redirectUrl.searchParams.set("verification_id", record.verification_id);
     redirectUrl.searchParams.set("status", status);
-    redirectUrl.searchParams.set("trust_score", String(trust_score));
+    redirectUrl.searchParams.set("trust_score", String(result.trust_score));
     if (sanitizedError)
       redirectUrl.searchParams.set("detail", sanitizedError);
 

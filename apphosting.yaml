@@ -24,3 +24,12 @@ env:
     secret: nac-api-key
     availability:
       - RUNTIME
+
+  - variable: GEMINI_API_KEY
+    secret: gemini-api-key
+    availability:
+      - RUNTIME
+  - variable: USE_GEMINI_TRUST_SCORE
+    value: "true"
+    availability:
+      - RUNTIME

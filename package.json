@@ -16,6 +16,7 @@
     "destroy:firestore": "firebase firestore:delete verifications --recursive -y"
   },
   "dependencies": {
+    "@google/genai": "^1.43.0",
     "firebase-admin": "^12.0.0",
     "network-as-code": "^6.0.0",
     "next": "14.2.18",

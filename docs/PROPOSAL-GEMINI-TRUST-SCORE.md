@@ -137,7 +137,8 @@ This keeps a **single contract:** the backend stores and returns the same JSON t
 
 ### 7.4 Recommendation
 
-- **Phase 1:** Implement Gemini trust score with the structured JSON and prompt above; no feedback yet.
+- **Implemented:** Phase 1 (Gemini trust score + structured JSON), Phase 2 (feedback collection + prompt injection), and demo correction UI. Env: `USE_GEMINI_TRUST_SCORE=true`, `GEMINI_API_KEY`, optional `GEMINI_INCLUDE_FEEDBACK_IN_PROMPT` (default true).
+- **Phase 1 (done):** Gemini trust score with the structured JSON and prompt above.
 - **Phase 2:** Add `verification_feedback` collection and a simple UI (e.g. “Was this correct?” / “False positive” / “False negative” + optional comment). Then implement **Option A** (inject last N feedbacks into the prompt) behind a feature flag.
 - **Phase 3 (optional):** Analytics on feedback, export for tuning, or integrate with Vertex feedback pipelines (Option C).
 

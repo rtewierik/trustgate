@@ -27,7 +27,7 @@ export function sanitizeErrorMessage(raw: string): string {
 }
 
 /** Keys allowed in check_result.detail (non-PII). */
-const ALLOWED_DETAIL_KEYS = new Set(["last_swap_hours_ago", "match_level"]);
+const ALLOWED_DETAIL_KEYS = new Set(["last_swap_hours_ago", "match_level", "explanation", "weight_impact"]);
 
 /**
  * Returns a detail object with only non-PII keys.

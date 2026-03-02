@@ -2,7 +2,7 @@ import * as admin from "firebase-admin";
 
 let firestoreInstance: admin.firestore.Firestore | null = null;
 
-function getFirestore() {
+export function getFirestore() {
   if (admin.apps.length === 0) {
     const projectId = process.env.GOOGLE_CLOUD_PROJECT || process.env.GCP_PROJECT;
     if (process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
@@ -49,6 +49,12 @@ export interface VerificationRecord {
   trust_score?: number;
   decision?: "allow" | "deny";
   check_results?: Array<{ name: string; status: string; detail?: Record<string, unknown> }>;
+  /** From Gemini: low = CONFIABLE, medium = REVISAR, high = ALTO RIESGO */
+  risk_level?: "low" | "medium" | "high";
+  /** One-line AI summary for UI */
+  summary?: string;
+  /** Optional recommendation (e.g. "REVIEW due to recent SIM swap") */
+  recommendation?: string;
   /** TTL field: set at initiate (pending); set to null when completed so document never expires. */
   expires_at?: string | null;
   created_at: string;
@@ -88,7 +94,7 @@ export async function completeVerification(
   verificationId: string,
   update: Pick<
     VerificationRecord,
-    "status" | "trust_score" | "decision" | "check_results" | "completed_at" | "expires_at"
+    "status" | "trust_score" | "decision" | "check_results" | "completed_at" | "expires_at" | "risk_level" | "summary" | "recommendation"
   > & { error?: string }
 ): Promise<void> {
   const db = getFirestore();
@@ -103,6 +109,9 @@ export async function completeVerification(
         ? null
         : admin.firestore.Timestamp.fromDate(new Date(update.expires_at)),
     ...(update.error != null && update.error !== "" && { error: update.error }),
+    ...(update.risk_level != null && { risk_level: update.risk_level }),
+    ...(update.summary != null && update.summary !== "" && { summary: update.summary }),
+    ...(update.recommendation != null && update.recommendation !== "" && { recommendation: update.recommendation }),
   };
   payload.subject = admin.firestore.FieldValue.delete();
   payload.claims = admin.firestore.FieldValue.delete();
