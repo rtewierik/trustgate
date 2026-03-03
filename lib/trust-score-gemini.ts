@@ -138,7 +138,10 @@ For a deny due to number verification failure:
 - Do not output markdown, code fences, or any text outside the single JSON object.
 - Do not add extra keys or omit required keys.
 - Do not use decision "allow" when trust_score < min_trust_score or when a critical check (number_verification fail, KYC birthdate fail) has failed.
-- Do not leave summary or recommendation empty string; use null for recommendation when not needed.`;
+- Do not leave summary or recommendation empty string; use null for recommendation when not needed.
+
+## Past corrections (when provided in the user message)
+You may receive "Corrections to align with" with past human feedback. Each correction can include verification_input: the NAC check outcomes (number_verification, sim_swap, kyc_match) for that past verification. Use this to decide whether the correction should influence the current verification: compare the current Input to each correction's verification_input; if the current verification is similar to a corrected one (same or very similar check outcomes), apply the corrected decision/trust_score as strong guidance. If the current verification differs (e.g. different failure reason), the correction may not apply.`;
 
 /** Gemini context cache requires at least 1024 tokens. Expanded system prompt meets the minimum. */
 function getCacheableSystemInstruction(): string {
@@ -146,9 +149,9 @@ function getCacheableSystemInstruction(): string {
 }
 
 function buildUserPrompt(input: TrustScoreGeminiInput, recentFeedbackJson: string): string {
-  let text = `Input:\n${JSON.stringify(input)}`;
+  let text = `Current verification input:\n${JSON.stringify(input)}`;
   if (recentFeedbackJson) {
-    text += `\n\nCorrections to align with:\n${recentFeedbackJson}`;
+    text += `\n\nPast corrections (use verification_input when present to infer if each correction should apply to this verification):\n${recentFeedbackJson}`;
   }
   return text;
 }
@@ -227,6 +230,7 @@ export async function computeTrustScoreWithGemini(
             feedback_type: f.feedback_type,
             comment: f.comment,
             checks_summary: f.checks_summary,
+            ...(f.verification_input && { verification_input: f.verification_input }),
           })),
           null,
           2

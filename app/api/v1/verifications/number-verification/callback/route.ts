@@ -4,6 +4,7 @@ import { numberVerification, simSwap, kycMatch } from "@/lib/nac";
 import { computeTrustScoreWithGemini } from "@/lib/trust-score-gemini";
 import { getVerification, completeVerification } from "@/lib/firestore";
 import { sanitizeErrorMessage, sanitizeCheckResults } from "@/lib/sanitize-pii";
+import type { StoredCheckInputs } from "@/lib/verification-types";
 
 // https://trustgate--openg-hack26bar-512.us-central1.hosted.app/api/v1/verifications/number-verification/callback?state=nv_mm9dys88_21f063ab&error=invalid_request&error_description=Unknown%20device
 
@@ -42,10 +43,16 @@ export async function GET(request: NextRequest) {
         policy
       );
       const sanitizedCheckResults = sanitizeCheckResults(result.checks);
+      const check_inputs: StoredCheckInputs = {
+        number_verification: { verified: syntheticNumVer.verified, ...(syntheticNumVer.detail && { detail: syntheticNumVer.detail }) },
+        sim_swap: { swapped: syntheticSimSwap.swapped, ...(syntheticSimSwap.last_swap_hours_ago !== undefined && { last_swap_hours_ago: syntheticSimSwap.last_swap_hours_ago }) },
+        kyc_match: { match: syntheticKycMatch.match, ...(syntheticKycMatch.match_level && { match_level: syntheticKycMatch.match_level }) },
+      };
       await completeVerification(state, {
         status: "denied",
         trust_score: result.trust_score,
         decision: result.decision,
+        check_inputs,
         check_results: sanitizedCheckResults,
         completed_at: new Date().toISOString(),
         expires_at: null,
@@ -122,11 +129,25 @@ export async function GET(request: NextRequest) {
     const now = new Date();
     const sanitizedCheckResults = sanitizeCheckResults(result.checks);
     const sanitizedError = numVer.detail ? sanitizeErrorMessage(numVer.detail) : undefined;
+    const check_inputs: StoredCheckInputs = {
+      number_verification: { verified: numVer.verified, ...(numVer.detail && { detail: numVer.detail }) },
+      sim_swap: {
+        swapped: simSwapRes.swapped,
+        ...(simSwapRes.last_swap_hours_ago !== undefined && { last_swap_hours_ago: simSwapRes.last_swap_hours_ago }),
+        ...("detail" in simSwapRes && simSwapRes.detail && { detail: simSwapRes.detail }),
+      },
+      kyc_match: {
+        match: kycRes.match,
+        ...(kycRes.match_level && { match_level: kycRes.match_level }),
+        ...("verified_claims" in kycRes && kycRes.verified_claims && { verified_claims: kycRes.verified_claims }),
+      },
+    };
 
     await completeVerification(state, {
       status,
       trust_score: result.trust_score,
       decision: result.decision,
+      check_inputs,
       check_results: sanitizedCheckResults,
       completed_at: now.toISOString(),
       expires_at: null,
