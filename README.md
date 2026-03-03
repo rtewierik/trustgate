@@ -169,7 +169,7 @@ Health check.
 
 ---
 
-## Repo structure
+## Architecture
 
 ```
 trustgate/
@@ -200,11 +200,11 @@ To use the real APIs (SIM Swap, Number Verification, KYC Match):
 
 ---
 
-## 👩‍💻 The Development Team
+## The Development Team
 * **Aïda Ibrahim** - Project Owner - [LinkedIn Profile](https://www.linkedin.com/in/aidatechlaw/)
 * **Ruben te Wierik** - Developer - [LinkedIn Profile](https://www.linkedin.com/in/rtewierik/)
 * **Geovanny Tipan** - Developer - [LinkedIn Profile](https://www.linkedin.com/in/geovanny-tipan-taipe-47a2371a1/)
-* **M Ibrahim Saleem** - Developer - [LinkedIn Profile](https://www.linkedin.com/in/ibrahimmuhammaddd/)
+* **M. Ibrahim Saleem** - Developer - [LinkedIn Profile](https://www.linkedin.com/in/ibrahimmuhammaddd/)
 * **Anna Costa** - Developer - [LinkedIn Profile](https://www.linkedin.com/in/annahico/)
 
 
