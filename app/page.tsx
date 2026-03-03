@@ -1,56 +1,89 @@
+"use client";
+
+import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 
 export default function LandingPage() {
+  const [howExpanded, setHowExpanded] = useState(false);
+  const howSectionRef = useRef<HTMLElement | null>(null);
+
+  // Expand and scroll into view when navigating to #how
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.location.hash === "#how") {
+      setHowExpanded(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (howExpanded && howSectionRef.current) {
+      howSectionRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [howExpanded]);
+
   return (
     <main style={styles.main}>
       <header style={styles.header}>
         <span style={styles.logo}>TrustGate</span>
         <nav style={styles.nav}>
-          <Link href="/dashboard/">Dashboard</Link>
-          <Link href="/history/">Historial</Link>
+          <Link href="/history/">History</Link>
         </nav>
       </header>
 
       <section style={styles.hero}>
-        <h1 style={styles.h1}>
-          El KYC del futuro no pide documentos.
-          <br />
-          <span style={styles.h1Accent}>Pregunta a la red.</span>
-        </h1>
-        <p style={styles.subtitle}>
-          Verificación de identidad en menos de 2 segundos con datos que la red telecom ya tiene.
-          Sin documentos, sin fricción.
-        </p>
-        <div style={styles.ctas}>
-          <Link href="/dashboard/" style={styles.primaryCta}>
-            Probar demo
+        <div style={styles.heroBg} aria-hidden />
+        <div style={styles.heroContent}>
+          <h1 style={styles.h1}>
+            The KYC of the future does not ask for documents.
+            <br />
+            <span style={styles.h1Accent}>Ask the network.</span>
+          </h1>
+          <p style={styles.subtitle}>
+            Identity verification in less than 10 seconds with data that the telecom network already has.
+            No documents, no friction.
+          </p>
+          <Link href="/demo/" className="hero-cta" style={styles.primaryCta}>
+            Try demo
           </Link>
-          <a href="#how" style={styles.secondaryCta}>
-            Cómo funciona
+          <a href="#how" className="hero-scroll-hint" style={styles.scrollHint} onClick={(e) => { e.preventDefault(); setHowExpanded(true); }}>
+            How it works ↓
           </a>
         </div>
       </section>
 
-      <section id="how" style={styles.section}>
-        <h2 style={styles.h2}>Cómo funciona</h2>
-        <div style={styles.cards}>
-          <div style={styles.card}>
-            <strong>1. Número + datos</strong>
-            <p>El usuario introduce su teléfono y nombre/fecha de nacimiento.</p>
-          </div>
-          <div style={styles.card}>
-            <strong>2. Tres comprobaciones</strong>
-            <p>Number Verification, SIM Swap y KYC Match en paralelo vía CAMARA.</p>
-          </div>
-          <div style={styles.card}>
-            <strong>3. Trust Score</strong>
-            <p>Allow/Deny y puntuación 0–100 en segundos.</p>
-          </div>
-        </div>
+      <section
+        id="how"
+        ref={howSectionRef}
+        style={howExpanded ? styles.section : { ...styles.section, display: "none" }}
+      >
+        {howExpanded && (
+          <>
+            <h2 style={styles.sectionTitle}>How it works</h2>
+            <div style={styles.expandableCard}>
+              <div style={styles.cards}>
+              <div style={styles.card}>
+                <span style={styles.cardNum}>1</span>
+                <strong>Number + details</strong>
+                <p>The user enters their phone number and name/date of birth.</p>
+              </div>
+              <div style={styles.card}>
+                <span style={styles.cardNum}>2</span>
+                <strong>Three checks</strong>
+                <p>Number Verification, SIM Swap and KYC Match in parallel via CAMARA.</p>
+              </div>
+              <div style={styles.card}>
+                <span style={styles.cardNum}>3</span>
+                <strong>Trust Score</strong>
+                <p>Allow/Deny and score 0–100 in seconds.</p>
+              </div>
+              </div>
+            </div>
+          </>
+        )}
       </section>
 
       <footer style={styles.footer}>
-        <p>TrustGate — Open Gateway Hackathon 2026</p>
+        <p>TrustGate — Open Gateway Hackathon 2026 — (Talent Arena MWC Team12)</p>
       </footer>
     </main>
   );
@@ -68,45 +101,121 @@ const styles: Record<string, React.CSSProperties> = {
   logo: { fontSize: "1.25rem", fontWeight: 700, color: "var(--accent)" },
   nav: { display: "flex", gap: "1.5rem" },
   hero: {
+    position: "relative",
     flex: 1,
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
-    padding: "3rem 2rem",
+    padding: "4rem 2rem",
     textAlign: "center",
+    overflow: "hidden",
   },
-  h1: { fontSize: "clamp(1.75rem, 4vw, 2.5rem)", marginBottom: "1rem", fontWeight: 600 },
+  heroBg: {
+    position: "absolute",
+    inset: 0,
+    background:
+      "radial-gradient(ellipse 80% 50% at 50% 0%, rgba(0, 212, 170, 0.08) 0%, transparent 50%), radial-gradient(circle at 20% 80%, rgba(0, 212, 170, 0.04) 0%, transparent 40%)",
+    pointerEvents: "none",
+  },
+  heroContent: {
+    position: "relative",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    maxWidth: "36rem",
+  },
+  h1: {
+    fontSize: "clamp(2rem, 5vw, 3rem)",
+    marginBottom: "1.25rem",
+    fontWeight: 700,
+    letterSpacing: "-0.02em",
+    lineHeight: 1.2,
+  },
   h1Accent: { color: "var(--accent)" },
-  subtitle: { color: "var(--muted)", maxWidth: "42ch", marginBottom: "2rem" },
-  ctas: { display: "flex", gap: "1rem", flexWrap: "wrap", justifyContent: "center" },
+  subtitle: {
+    color: "var(--muted)",
+    maxWidth: "42ch",
+    marginBottom: "2.5rem",
+    fontSize: "1.0625rem",
+    lineHeight: 1.6,
+  },
   primaryCta: {
+    display: "inline-block",
     background: "var(--accent)",
     color: "var(--bg)",
-    padding: "0.75rem 1.5rem",
-    borderRadius: "8px",
+    padding: "1rem 2rem",
+    borderRadius: "12px",
     fontWeight: 600,
+    fontSize: "1.125rem",
+    textDecoration: "none",
+    boxShadow: "0 0 0 0 rgba(0, 212, 170, 0.4)",
+    transition: "transform 0.2s ease, box-shadow 0.2s ease",
   },
-  secondaryCta: {
-    border: "1px solid var(--border)",
-    padding: "0.75rem 1.5rem",
-    borderRadius: "8px",
+  scrollHint: {
+    marginTop: "1.5rem",
+    fontSize: "0.875rem",
+    color: "var(--muted)",
+    textDecoration: "none",
+  },
+  section: {
+    padding: "4rem 2rem",
+    borderTop: "1px solid var(--border)",
+    background: "var(--surface)",
+  },
+  sectionTitle: {
+    textAlign: "center",
+    marginBottom: "1.5rem",
+    fontSize: "1.5rem",
+    fontWeight: 600,
     color: "var(--text)",
   },
-  section: { padding: "4rem 2rem", borderTop: "1px solid var(--border)" },
-  h2: { textAlign: "center", marginBottom: "2rem", fontSize: "1.5rem" },
+  expandableCard: {
+    display: "block",
+    width: "100%",
+    maxWidth: "920px",
+    margin: "0 auto",
+    padding: "1.25rem 1.5rem",
+    border: "1px solid var(--border)",
+    borderRadius: "16px",
+    background: "var(--bg)",
+    color: "var(--text)",
+    textAlign: "center",
+    cursor: "pointer",
+  },
+  expandableCardTitle: {
+    fontSize: "1.25rem",
+    fontWeight: 600,
+    display: "block",
+    textAlign: "center",
+  },
   cards: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+    gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
     gap: "1.5rem",
-    maxWidth: "900px",
-    margin: "0 auto",
+    marginTop: "1.5rem",
   },
   card: {
-    background: "var(--surface)",
+    position: "relative",
+    background: "var(--bg)",
     border: "1px solid var(--border)",
-    borderRadius: "12px",
-    padding: "1.5rem",
+    borderRadius: "16px",
+    padding: "1.75rem 1.75rem 1.75rem 3.5rem",
+  },
+  cardNum: {
+    position: "absolute",
+    left: "1rem",
+    top: "1.5rem",
+    width: "1.75rem",
+    height: "1.75rem",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    background: "var(--accent)",
+    color: "var(--bg)",
+    borderRadius: "50%",
+    fontSize: "0.875rem",
+    fontWeight: 700,
   },
   footer: {
     padding: "1.5rem 2rem",

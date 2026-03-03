@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+  <!-- Gate arch: trust + barrier -->
+  <path d="M6 26V13a10 10 0 0 1 20 0v13" stroke="#00d4aa" stroke-width="2.25" stroke-linecap="round" fill="none"/>
+  <path d="M10 26V13M22 26V13" stroke="#00d4aa" stroke-width="2.25" stroke-linecap="round"/>
+  <path d="M6 13c0 0 3-7 10-7s10 7 10 7" stroke="#00d4aa" stroke-width="2.25" stroke-linecap="round" fill="none"/>
+  <!-- Verification check -->
+  <path d="M12 17l4 4 8-9" stroke="#00d4aa" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+</svg>

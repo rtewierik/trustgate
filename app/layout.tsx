@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "TrustGate — Verificación de Identidad por Red Telecom",
-  description: "El KYC del futuro. Verificación instantánea sin documentos.",
+  title: "TrustGate — Identity Verification via Telecom Network",
+  description: "The KYC of the future. Instant verification without documents.",
 };
 
 export default function RootLayout({
@@ -12,7 +12,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="es">
+    <html lang="en">
       <body>{children}</body>
     </html>
   );
