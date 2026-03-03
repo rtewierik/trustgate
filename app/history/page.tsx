@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { AppHeader } from "@/components/AppHeader";
+import { VerificationFeedbackSection } from "@/components/VerificationFeedbackSection";
 import { VerificationResultCard, type VerificationResultCardData } from "@/components/VerificationResultCard";
 import { API_BASE } from "@/lib/api";
 import { pageLayoutStyles } from "@/lib/layoutStyles";
@@ -74,6 +75,13 @@ export default function HistoryPage() {
               verification={verification}
               showSubject={true}
               showCreatedAt={true}
+            />
+            <VerificationFeedbackSection
+              verification={{
+                verification_id: verification.verification_id,
+                decision: verification.decision,
+                trust_score: verification.trust_score,
+              }}
             />
           </div>
         )}

@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { AppHeader } from "@/components/AppHeader";
+import { VerificationFeedbackSection } from "@/components/VerificationFeedbackSection";
 import { VerificationResultCard, type VerificationResultCardData } from "@/components/VerificationResultCard";
 import { API_BASE } from "@/lib/api";
 import { pageLayoutStyles } from "@/lib/layoutStyles";
@@ -39,36 +40,6 @@ const demoStyles: Record<string, React.CSSProperties> = {
   },
   resultTitle: { color: "var(--success)", marginBottom: "0.5rem" },
   muted: { marginTop: "0.5rem", fontSize: "0.75rem", color: "var(--muted)" },
-  feedbackSection: {
-    marginTop: "1.5rem",
-    padding: "1rem",
-    border: "1px solid var(--border)",
-    borderRadius: "12px",
-    background: "var(--bg)",
-  },
-  feedbackTitle: { fontSize: "0.95rem", fontWeight: 600, marginBottom: "0.75rem" },
-  feedbackButtons: { display: "flex", flexWrap: "wrap", gap: "0.5rem", marginBottom: "0.75rem" },
-  feedbackBtn: {
-    padding: "0.5rem 1rem",
-    borderRadius: "8px",
-    border: "1px solid var(--border)",
-    background: "var(--surface)",
-    cursor: "pointer",
-    fontSize: "0.875rem",
-  },
-  feedbackBtnSuccess: { borderColor: "var(--success)", color: "var(--success)" },
-  feedbackBtnDanger: { borderColor: "var(--danger)", color: "var(--danger)" },
-  feedbackComment: {
-    width: "100%",
-    minHeight: "60px",
-    padding: "0.5rem",
-    borderRadius: "8px",
-    border: "1px solid var(--border)",
-    background: "var(--bg)",
-    fontSize: "0.875rem",
-    marginTop: "0.5rem",
-  },
-  feedbackThankYou: { fontSize: "0.9rem", color: "var(--success)", marginTop: "0.5rem" },
   newVerificationBtn: { marginTop: "1rem" },
 };
 
@@ -83,9 +54,6 @@ function DemoContent() {
   const [initiateResult, setInitiateResult] = useState<InitiateResult | null>(null);
   const [result, setResult] = useState<VerificationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [feedbackSent, setFeedbackSent] = useState(false);
-  const [feedbackLoading, setFeedbackLoading] = useState(false);
-  const [feedbackComment, setFeedbackComment] = useState("");
   const popupRef = useRef<Window | null>(null);
   const pendingStateRef = useRef<string | null>(null);
   const popupCheckIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -115,7 +83,6 @@ function DemoContent() {
           if (verification) {
             setResult(verification);
             setInitiateResult(null);
-            setFeedbackSent(false);
           }
         })
         .catch(() => {})
@@ -202,43 +169,12 @@ function DemoContent() {
           if (verification) {
             setResult(verification);
             setInitiateResult(null);
-            setFeedbackSent(false);
           }
         })
         .catch(() => {})
         .finally(() => setLoading(false));
     }, 500);
     popupCheckIntervalRef.current = interval;
-  }
-
-  async function submitFeedback(feedbackType: "correct" | "false_positive" | "false_negative") {
-    if (!result?.verification_id) return;
-    setFeedbackLoading(true);
-    try {
-      const correct_decision =
-        feedbackType === "correct"
-          ? result.decision!
-          : feedbackType === "false_negative"
-            ? "allow"
-            : "deny";
-      const res = await fetch(`${API_BASE}/api/v1/verifications/feedback`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          verification_id: result.verification_id,
-          correct_decision,
-          correct_trust_score: result.trust_score,
-          feedback_type: feedbackType,
-          comment: feedbackComment.trim() || undefined,
-        }),
-      });
-      if (res.ok) setFeedbackSent(true);
-      else setError("Could not send feedback");
-    } catch {
-      setError("Network error while sending feedback");
-    } finally {
-      setFeedbackLoading(false);
-    }
   }
 
   const s = demoStyles;
@@ -327,56 +263,11 @@ function DemoContent() {
         ) : (
           <div style={{ marginTop: "2rem" }}>
             <VerificationResultCard verification={result} showSubject={false} />
-            <div style={s.feedbackSection} role="region" aria-label="Result correction">
-              <p style={s.feedbackTitle}>Was the result correct?</p>
-              {feedbackSent ? (
-                <p style={s.feedbackThankYou}>Thank you, feedback saved. It will help improve future decisions.</p>
-              ) : (
-                <>
-                  <div style={s.feedbackButtons}>
-                    <button
-                      type="button"
-                      style={{ ...s.feedbackBtn, ...s.feedbackBtnSuccess }}
-                      onClick={() => submitFeedback("correct")}
-                      disabled={feedbackLoading}
-                    >
-                      Correct
-                    </button>
-                    <button
-                      type="button"
-                      style={{ ...s.feedbackBtn, ...s.feedbackBtnDanger }}
-                      onClick={() => submitFeedback("false_positive")}
-                      disabled={feedbackLoading}
-                      title="System approved but should have denied"
-                    >
-                      False positive
-                    </button>
-                    <button
-                      type="button"
-                      style={{ ...s.feedbackBtn, ...s.feedbackBtnDanger }}
-                      onClick={() => submitFeedback("false_negative")}
-                      disabled={feedbackLoading}
-                      title="System denied but should have approved"
-                    >
-                      False negative
-                    </button>
-                  </div>
-                  <label style={{ display: "block", fontSize: "0.875rem", color: "var(--muted)", marginTop: "0.5rem" }}>
-                    Comment (optional)
-                  </label>
-                  <textarea
-                    style={s.feedbackComment}
-                    placeholder="E.g. Date of birth was correct on the documents."
-                    value={feedbackComment}
-                    onChange={(e) => setFeedbackComment(e.target.value)}
-                  />
-                </>
-              )}
-            </div>
+            <VerificationFeedbackSection verification={result} />
             <button
               type="button"
               style={{ ...s.button, ...s.newVerificationBtn }}
-              onClick={() => { setResult(null); setError(null); setFeedbackSent(false); setFeedbackComment(""); }}
+              onClick={() => { setResult(null); setError(null); }}
             >
               New verification
             </button>
