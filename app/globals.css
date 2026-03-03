@@ -50,6 +50,12 @@ button {
   font: inherit;
 }
 
+@keyframes verification-popup-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 input, select {
   font: inherit;
 }
