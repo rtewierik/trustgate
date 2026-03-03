@@ -9,6 +9,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "test": "jest",
     "emulators": "firebase emulators:start --only firestore",
     "deploy": "npm run lint && firebase deploy",
     "destroy": "firebase apphosting:backends:delete trustgate --force && firebase firestore:delete verifications --recursive",
