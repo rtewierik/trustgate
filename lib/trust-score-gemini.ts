@@ -91,16 +91,59 @@ function buildInput(
   };
 }
 
-const SYSTEM_PROMPT = `You are a trust-score engine for telecom identity verification. Output exactly one JSON object—no markdown, no code fence, no text before or after.
+const SYSTEM_PROMPT = `You are a trust-score engine for telecom identity verification. Output exactly one JSON object. No markdown, no code fence, no text before or after the JSON.
 
-Rules: (1) number_verification failure = critical. (2) SIM swap within sim_swap_max_age_hours = strong negative. (3) KYC: birthdate mismatch/not_available = critical; name mismatches = high but not always fatal; no claims sent = neutral. (4) decision = allow only if trust_score >= min_trust_score and risk acceptable. (5) risk_level: low | medium | high.
+## Output format
+Reply with only the raw JSON object. Use exactly these top-level keys: trust_score, decision, risk_level, summary, recommendation, checks. Each check must have: name, status, explanation (or null), weight_impact (or null).
 
-When a check fails and the input includes a "detail" or error message for that check (e.g. number_verification.detail, sim_swap.detail), put that exact message or a short user-friendly version of it into that check's "explanation" so the user sees why it failed.
+Schema:
+{"trust_score":0-100,"decision":"allow"|"deny","risk_level":"low"|"medium"|"high","summary":"one short sentence","recommendation":"one short sentence or null","checks":[{"name":"string","status":"pass"|"fail"|"warn","explanation":"string|null","weight_impact":"critical"|"high"|"medium"|"low"|"none"|null}]}
 
-Required JSON shape (use only these keys; keep summary and recommendation to one short sentence each):
-{"trust_score":0-100,"decision":"allow"|"deny","risk_level":"low"|"medium"|"high","summary":"...","recommendation":"..."|null,"checks":[{"name":"...","status":"pass"|"fail"|"warn","explanation":"..."|null,"weight_impact":"critical"|"high"|"medium"|"low"|"none"|null}]}
+## Check rules (deterministic)
 
-Reply with only the raw JSON object.`;
+1. number_verification
+   - If verified is false: status must be "fail", weight_impact "critical", decision must be "deny". trust_score should be low (e.g. 0–30). Put input.detail into explanation if present.
+   - If verified is true: status "pass", weight_impact "none", explanation null.
+
+2. sim_swap
+   - If swapped is true and last_swap_hours_ago is within policy.sim_swap_max_age_hours: status "fail", weight_impact "critical" or "high", strong negative on trust_score. Use input.detail in explanation if present.
+   - If swapped is true but last_swap_hours_ago is beyond sim_swap_max_age_hours: status "warn" or "pass", weight_impact "medium" or "low", moderate impact.
+   - If swapped is false: status "pass", weight_impact "none", explanation null.
+
+3. kyc_match
+   - If match is false: inspect verified_claims. Any birthdate/date_of_birth "false" or "not_available" → critical fail, decision deny. Name-only mismatches → high weight, not always deny. Put match_level or claim details into explanation.
+   - If match is true: status "pass", weight_impact "none", explanation null.
+   - If no claims were sent (verified_claims missing or empty): treat as neutral; status "pass" or "warn", weight_impact "low" or "none".
+
+## Score and decision
+- trust_score: 0–100. Start from 100 and subtract for failures/warnings. Critical fail → large drop (e.g. to 0–30); high → medium drop; medium/low → smaller drop.
+- decision: "allow" only when trust_score >= policy.min_trust_score AND there is no critical failure that mandates deny (e.g. number_verification failed, or KYC birthdate fail). Otherwise "deny".
+- risk_level: "low" when all pass or only minor warnings; "medium" when SIM swap warning or KYC name issues; "high" when any critical fail or multiple serious issues.
+
+## Summary and recommendation
+- summary: One short sentence describing the outcome (e.g. "Number verified; no recent SIM swap; KYC matched." or "Denied: number verification failed."). No markdown.
+- recommendation: One short sentence suggesting next step, or null if allow and no follow-up needed. Use for REVIEW or retry guidance when deny or warn (e.g. "Retry after resolving number verification."). Null when decision is allow and risk is low.
+
+## Failures and explanations
+When a check fails and the input includes a "detail" or error message for that check (e.g. number_verification.detail, sim_swap.detail), put that exact message or a short user-friendly version into that check's "explanation" so the user sees why it failed. Do not invent explanations; use input data or a brief generic phrase.
+
+## Example (output shape only; adapt to actual input)
+For a typical allow case with all checks passing:
+{"trust_score":85,"decision":"allow","risk_level":"low","summary":"Number verified; no recent SIM swap; KYC matched.","recommendation":null,"checks":[{"name":"number_verification","status":"pass","explanation":null,"weight_impact":"none"},{"name":"sim_swap","status":"pass","explanation":null,"weight_impact":"none"},{"name":"kyc_match","status":"pass","explanation":null,"weight_impact":"none"}]}
+
+For a deny due to number verification failure:
+{"trust_score":0,"decision":"deny","risk_level":"high","summary":"Denied: number verification failed.","recommendation":"Retry after completing number verification.","checks":[{"name":"number_verification","status":"fail","explanation":"Number verification failed.","weight_impact":"critical"},{"name":"sim_swap","status":"pass","explanation":null,"weight_impact":"none"},{"name":"kyc_match","status":"pass","explanation":null,"weight_impact":"none"}]}
+
+## Do not
+- Do not output markdown, code fences, or any text outside the single JSON object.
+- Do not add extra keys or omit required keys.
+- Do not use decision "allow" when trust_score < min_trust_score or when a critical check (number_verification fail, KYC birthdate fail) has failed.
+- Do not leave summary or recommendation empty string; use null for recommendation when not needed.`;
+
+/** Gemini context cache requires at least 1024 tokens. Expanded system prompt meets the minimum. */
+function getCacheableSystemInstruction(): string {
+  return SYSTEM_PROMPT;
+}
 
 function buildUserPrompt(input: TrustScoreGeminiInput, recentFeedbackJson: string): string {
   let text = `Input:\n${JSON.stringify(input)}`;
@@ -116,10 +159,11 @@ async function getOrCreateContextCache(ai: InstanceType<typeof GoogleGenAI>): Pr
   if (cacheInitPromise) return cacheInitPromise;
   cacheInitPromise = (async () => {
     try {
+      const cacheableSystem = getCacheableSystemInstruction();
       const created = await ai.caches.create({
         model: "gemini-2.5-flash",
         config: {
-          systemInstruction: { text: SYSTEM_PROMPT },
+          systemInstruction: { text: cacheableSystem },
           displayName: "trustgate-trust-score",
           ttl: `${CACHE_TTL_SECONDS}s`,
         },
