@@ -6,8 +6,6 @@ import { getVerification, completeVerification } from "@/lib/firestore";
 import { sanitizeErrorMessage, sanitizeCheckResults } from "@/lib/sanitize-pii";
 import type { StoredCheckInputs } from "@/lib/verification-types";
 
-// https://trustgate--openg-hack26bar-512.us-central1.hosted.app/api/v1/verifications/number-verification/callback?state=nv_mm9dys88_21f063ab&error=invalid_request&error_description=Unknown%20device
-
 /**
  * Callback for the number verification redirect flow.
  * Receives code and state, loads the verification by state, completes number verification,
