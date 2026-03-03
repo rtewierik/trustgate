@@ -1,4 +1,5 @@
 import * as admin from "firebase-admin";
+import type { StoredCheckInputs } from "./verification-types";
 
 let firestoreInstance: admin.firestore.Firestore | null = null;
 
@@ -48,6 +49,8 @@ export interface VerificationRecord {
   /** Set in callback when checks complete. */
   trust_score?: number;
   decision?: "allow" | "deny";
+  /** NAC outcomes passed to Gemini (no PII). Stored so feedback can include context and Gemini can compare. */
+  check_inputs?: StoredCheckInputs;
   check_results?: Array<{ name: string; status: string; detail?: Record<string, unknown> }>;
   /** From Gemini: low = LOW RISK, medium = REVIEW, high = HIGH RISK */
   risk_level?: "low" | "medium" | "high";
@@ -94,7 +97,7 @@ export async function completeVerification(
   verificationId: string,
   update: Pick<
     VerificationRecord,
-    "status" | "trust_score" | "decision" | "check_results" | "completed_at" | "expires_at" | "risk_level" | "summary" | "recommendation"
+    "status" | "trust_score" | "decision" | "check_inputs" | "check_results" | "completed_at" | "expires_at" | "risk_level" | "summary" | "recommendation"
   > & { error?: string }
 ): Promise<void> {
   const db = getFirestore();
@@ -102,6 +105,7 @@ export async function completeVerification(
     status: update.status,
     trust_score: update.trust_score,
     decision: update.decision,
+    check_inputs: update.check_inputs ?? undefined,
     check_results: update.check_results,
     completed_at: update.completed_at,
     expires_at:

@@ -5,6 +5,7 @@
 
 import * as admin from "firebase-admin";
 import { getFirestore } from "./firestore";
+import type { StoredCheckInputs } from "./verification-types";
 
 export const VERIFICATION_FEEDBACK_COLLECTION = "verification_feedback";
 
@@ -19,9 +20,45 @@ export interface VerificationFeedbackRecord {
   comment?: string;
   /** Anonymised summary of check outcomes for prompt injection (e.g. "number_verification: pass, sim_swap: fail"). */
   checks_summary?: string;
+  /** NAC outcomes for that verification (no PII). Lets Gemini compare to current verification and infer if correction applies. */
+  verification_input?: StoredCheckInputs;
 }
 
-export async function saveFeedback(data: Omit<VerificationFeedbackRecord, "created_at">): Promise<void> {
+function parseStoredCheckInputs(v: unknown): StoredCheckInputs | null {
+  if (!v || typeof v !== "object") return null;
+  const o = v as Record<string, unknown>;
+  const nv = o.number_verification;
+  const ss = o.sim_swap;
+  const kyc = o.kyc_match;
+  if (!nv || typeof nv !== "object" || !ss || typeof ss !== "object" || !kyc || typeof kyc !== "object") return null;
+  const nvObj = nv as Record<string, unknown>;
+  const ssObj = ss as Record<string, unknown>;
+  const kycObj = kyc as Record<string, unknown>;
+  const verified_claims =
+    kycObj.verified_claims && typeof kycObj.verified_claims === "object" && !Array.isArray(kycObj.verified_claims)
+      ? (kycObj.verified_claims as Record<string, "true" | "false" | "not_available">)
+      : undefined;
+  return {
+    number_verification: {
+      verified: Boolean(nvObj.verified),
+      ...(typeof nvObj.detail === "string" && { detail: nvObj.detail }),
+    },
+    sim_swap: {
+      swapped: Boolean(ssObj.swapped),
+      ...(typeof ssObj.last_swap_hours_ago === "number" && { last_swap_hours_ago: ssObj.last_swap_hours_ago }),
+      ...(typeof ssObj.detail === "string" && { detail: ssObj.detail }),
+    },
+    kyc_match: {
+      match: Boolean(kycObj.match),
+      ...(typeof kycObj.match_level === "string" && { match_level: kycObj.match_level }),
+      ...(verified_claims && { verified_claims }),
+    },
+  };
+}
+
+export async function saveFeedback(
+  data: Omit<VerificationFeedbackRecord, "created_at">
+): Promise<void> {
   const db = getFirestore();
   const doc = {
     ...data,
@@ -52,6 +89,7 @@ export async function getRecentFeedback(limit: number): Promise<VerificationFeed
         : createdAt && typeof createdAt === "object" && "toDate" in createdAt
           ? (createdAt as admin.firestore.Timestamp).toDate().toISOString()
           : new Date().toISOString();
+    const verification_input = parseStoredCheckInputs(raw.verification_input);
     out.push({
       verification_id: String(raw.verification_id ?? ""),
       created_at,
@@ -63,6 +101,7 @@ export async function getRecentFeedback(limit: number): Promise<VerificationFeed
           : "correct",
       comment: typeof raw.comment === "string" ? raw.comment : undefined,
       checks_summary: typeof raw.checks_summary === "string" ? raw.checks_summary : undefined,
+      verification_input: verification_input ?? undefined,
     });
   });
   return out;

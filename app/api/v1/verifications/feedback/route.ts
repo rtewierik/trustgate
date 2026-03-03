@@ -54,6 +54,7 @@ export async function POST(request: NextRequest) {
       feedback_type: feedback_type as FeedbackType,
       comment: comment?.trim() || undefined,
       checks_summary,
+      verification_input: verification.check_inputs ?? undefined,
     });
 
     return NextResponse.json({ ok: true, message: "Feedback saved" });
