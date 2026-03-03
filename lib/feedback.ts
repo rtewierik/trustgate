@@ -38,6 +38,14 @@ function parseStoredCheckInputs(v: unknown): StoredCheckInputs | null {
     kycObj.verified_claims && typeof kycObj.verified_claims === "object" && !Array.isArray(kycObj.verified_claims)
       ? (kycObj.verified_claims as Record<string, "true" | "false" | "not_available">)
       : undefined;
+  const raw_match_results =
+    kycObj.raw_match_results && typeof kycObj.raw_match_results === "object" && !Array.isArray(kycObj.raw_match_results)
+      ? (kycObj.raw_match_results as Record<string, string | number>)
+      : undefined;
+  const selected_claim_keys =
+    Array.isArray(kycObj.selected_claim_keys) && kycObj.selected_claim_keys.every((x) => typeof x === "string")
+      ? (kycObj.selected_claim_keys as string[])
+      : undefined;
   return {
     number_verification: {
       verified: Boolean(nvObj.verified),
@@ -52,6 +60,8 @@ function parseStoredCheckInputs(v: unknown): StoredCheckInputs | null {
       match: Boolean(kycObj.match),
       ...(typeof kycObj.match_level === "string" && { match_level: kycObj.match_level }),
       ...(verified_claims && { verified_claims }),
+      ...(raw_match_results && { raw_match_results }),
+      ...(selected_claim_keys && { selected_claim_keys }),
     },
   };
 }

@@ -98,7 +98,7 @@ export async function GET(request: NextRequest) {
   }
   const phoneNumber = subject.phone_number;
   const country = subject.country;
-  const claims = record.claims ?? {};
+  const claims = { ...(record.claims ?? {}), country };
   const { checks, policy } = record;
 
   try {
@@ -112,7 +112,7 @@ export async function GET(request: NextRequest) {
         ? simSwap(phoneNumber, country)
         : Promise.resolve({ swapped: false, last_swap_hours_ago: 999 }),
       checks.includes("kyc_match")
-        ? kycMatch(phoneNumber, country, claims)
+        ? kycMatch(phoneNumber, claims)
         : Promise.resolve({ match: true, match_level: "high" as const }),
     ]);
 
@@ -138,6 +138,8 @@ export async function GET(request: NextRequest) {
         match: kycRes.match,
         ...(kycRes.match_level && { match_level: kycRes.match_level }),
         ...("verified_claims" in kycRes && kycRes.verified_claims && { verified_claims: kycRes.verified_claims }),
+        ...("raw_match_results" in kycRes && kycRes.raw_match_results && { raw_match_results: kycRes.raw_match_results }),
+        ...("selected_claim_keys" in kycRes && kycRes.selected_claim_keys && { selected_claim_keys: kycRes.selected_claim_keys }),
       },
     };
 

@@ -36,6 +36,10 @@ export interface KycMatchResult {
   detail?: string;
   /** Per-claim verification result for claims that were sent (true/false/not_available). */
   verified_claims?: Record<string, "true" | "false" | "not_available">;
+  /** Full API response (all *Match and *MatchScore fields) for Gemini to evaluate. */
+  raw_match_results?: Record<string, string | number>;
+  /** Param keys that were actually sent (e.g. givenName, familyName, birthdate). Gemini uses this to count how many selected claims failed. */
+  selected_claim_keys?: string[];
 }
 
 /** KYC API returns per-field *Match values: "true" | "false" | "not_available". */
@@ -56,6 +60,14 @@ const CLAIM_TO_MATCH_KEY: Record<string, string> = {
   email: "emailMatch",
   streetName: "streetNameMatch",
   streetNumber: "streetNumberMatch",
+};
+
+/** Incoming claim keys (e.g. from API) → param key for NAC. Only keys in CLAIM_TO_MATCH_KEY are supported. */
+const CLAIM_KEY_TO_PARAM: Record<string, string> = {
+  given_name: "givenName",
+  family_name: "familyName",
+  date_of_birth: "birthdate",
+  country: "country",
 };
 
 /**
@@ -187,38 +199,45 @@ export async function simSwap(phoneNumber: string, _country: string): Promise<Si
 
 export async function kycMatch(
   phoneNumber: string,
-  country: string,
-  claims: { given_name?: string; family_name?: string; date_of_birth?: string }
+  claims: Record<string, string | undefined>
 ): Promise<KycMatchResult> {
   if (!NAC_API_KEY) {
-    return { match: true, match_level: "high", detail: "mock: no NAC key" };
+    return {
+      match: true,
+      match_level: "high",
+      detail: "mock: no NAC key",
+      raw_match_results: {},
+      selected_claim_keys: [],
+    };
   }
   try {
     const client = getClient();
-    const params = {
-      phoneNumber,
-      country,
-      givenName: claims.given_name,
-      familyName: claims.family_name,
-      birthdate: claims.date_of_birth,
-    };
+    const selectedClaimKeys: string[] = [];
+    const sentForVerification: Record<string, string | undefined> = {};
+    for (const [claimKey, value] of Object.entries(claims)) {
+      const paramKey = CLAIM_KEY_TO_PARAM[claimKey];
+      if (!paramKey || value == null || String(value).trim() === "") continue;
+      if (!CLAIM_TO_MATCH_KEY[paramKey]) continue;
+      sentForVerification[paramKey] = value;
+      selectedClaimKeys.push(paramKey);
+    }
+    const params = { phoneNumber, ...sentForVerification };
     const result = (await client.api.kycMatch.matchCustomer(params)) as KycMatchApiResponse;
     console.log("[NAC] kycMatch", { phoneNumber, params, result });
-
-    const sentForVerification = {
-      country,
-      givenName: params.givenName,
-      familyName: params.familyName,
-      birthdate: params.birthdate,
-    };
     const { match, match_level, verified_claims } = kycMatchLevelFromResponse(
       sentForVerification,
       result
     );
+    const raw_match_results: Record<string, string | number> = {};
+    for (const [k, v] of Object.entries(result)) {
+      if (v !== undefined && v !== null) raw_match_results[k] = v as string | number;
+    }
     return {
       match,
       match_level,
       verified_claims: Object.keys(verified_claims).length > 0 ? verified_claims : undefined,
+      raw_match_results: Object.keys(raw_match_results).length > 0 ? raw_match_results : undefined,
+      selected_claim_keys: selectedClaimKeys.length > 0 ? selectedClaimKeys : undefined,
     };
   } catch (e) {
     console.error("[NAC] kycMatch error", e);

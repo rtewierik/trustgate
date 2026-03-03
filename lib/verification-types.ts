@@ -11,5 +11,7 @@ export interface StoredCheckInputs {
     match: boolean;
     match_level?: string;
     verified_claims?: Record<string, "true" | "false" | "not_available">;
+    raw_match_results?: Record<string, string | number>;
+    selected_claim_keys?: string[];
   };
 }

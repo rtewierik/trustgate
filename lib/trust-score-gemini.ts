@@ -30,6 +30,10 @@ export interface TrustScoreGeminiInput {
     match: boolean;
     match_level?: string;
     verified_claims?: Record<string, "true" | "false" | "not_available">;
+    /** Full API response (all *Match / *MatchScore). Use this with selected_claim_keys to evaluate KYC. */
+    raw_match_results?: Record<string, string | number>;
+    /** Claims that were actually requested (e.g. ["givenName","familyName","birthdate"]). Only these count for pass/fail. */
+    selected_claim_keys?: string[];
   };
   policy: { min_trust_score: number; sim_swap_max_age_hours?: number };
 }
@@ -83,6 +87,8 @@ function buildInput(
       match: kycMatch.match,
       match_level: kycMatch.match_level,
       verified_claims: kycMatch.verified_claims,
+      ...(kycMatch.raw_match_results != null && { raw_match_results: kycMatch.raw_match_results }),
+      ...(kycMatch.selected_claim_keys != null && { selected_claim_keys: kycMatch.selected_claim_keys }),
     },
     policy: {
       min_trust_score: policy.min_trust_score,
@@ -111,9 +117,11 @@ Schema:
    - If swapped is false: status "pass", weight_impact "none", explanation null.
 
 3. kyc_match
-   - If match is false: inspect verified_claims. Any birthdate/date_of_birth "false" or "not_available" → critical fail, decision deny. Name-only mismatches → high weight, not always deny. Put match_level or claim details into explanation.
-   - If match is true: status "pass", weight_impact "none", explanation null.
-   - If no claims were sent (verified_claims missing or empty): treat as neutral; status "pass" or "warn", weight_impact "low" or "none".
+   - Ignore the pre-computed match and match_level. Use raw_match_results and selected_claim_keys instead.
+   - raw_match_results: full API response (e.g. givenNameMatch, familyNameMatch, birthdateMatch, countryMatch, and optional *MatchScore). selected_claim_keys: only the claims the user requested (e.g. ["givenName","familyName","birthdate"]). For each key in selected_claim_keys, the result is in raw_match_results under (key + "Match") (e.g. givenName → givenNameMatch). Do not count country or other non-selected fields.
+   - Count how many selected claims have value "true" vs "false" or "not_available" or missing. All selected passed → status "pass", weight_impact "none", explanation null. Any selected failed → set status "fail" or "warn"; use weight_impact: birthdate fail = "critical", name(s) fail = "high", mix = "critical" or "high". Put in explanation how many selected claims failed (e.g. "2 of 3 selected KYC claims failed (givenName, birthdate).").
+   - If no claims were sent (selected_claim_keys missing or empty): treat as neutral; status "pass" or "warn", weight_impact "low" or "none".
+   - Decide trust_score and decision from the selected-claims outcome: all selected passed → no penalty; any fail → reduce score (critical → large drop, high → medium drop).
 
 ## Score and decision
 - trust_score: 0–100. Start from 100 and subtract for failures/warnings. Critical fail → large drop (e.g. to 0–30); high → medium drop; medium/low → smaller drop.
