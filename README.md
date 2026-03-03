@@ -6,6 +6,8 @@ API + dashboard in a single Next.js app: identity verification in &lt; 2 seconds
 
 📐 **[Architecture diagram](docs/ARCHITECTURE.md)** — Mermaid diagrams for technical pitch (flow, data, trust score).
 
+🎬 **[Demo video](docs/demo.mp4)** — Walkthrough of TrustGate identity verification flow.
+
 - **Platform:** one Next.js app (frontend + API) deployed with **Firebase App Hosting**
 - **Database:** Firestore  
 - **Deploy:** single command (`firebase deploy`); one TS build → front and back from the same artifacts.
