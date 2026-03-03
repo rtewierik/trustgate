@@ -58,6 +58,8 @@ function DemoContent() {
   const pendingStateRef = useRef<string | null>(null);
   const popupCheckIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const nextStepRef = useRef<HTMLDivElement | null>(null);
+  const authorizationUrlRef = useRef<string | null>(null);
+  authorizationUrlRef.current = initiateResult?.authorization_url ?? null;
 
   useEffect(() => {
     if (initiateResult && nextStepRef.current) {
@@ -70,6 +72,17 @@ function DemoContent() {
     const handleMessage = (event: MessageEvent) => {
       if (event.origin !== window.location.origin) return;
       const data = event.data;
+
+      // Popup loaded our route and is ready; send it the authorization URL so it can redirect to the operator
+      const url = authorizationUrlRef.current;
+      if (data?.type === "VERIFICATION_POPUP_READY" && popupRef.current && event.source === popupRef.current && url) {
+        event.source.postMessage(
+          { type: "VERIFICATION_POPUP_GO", authorization_url: url },
+          window.location.origin
+        );
+        return;
+      }
+
       if (data?.type !== "NUMBER_VERIFICATION_DONE" || !data.state) return;
       pendingStateRef.current = null;
       if (popupCheckIntervalRef.current) {
@@ -148,11 +161,9 @@ function DemoContent() {
       clearInterval(popupCheckIntervalRef.current);
       popupCheckIntervalRef.current = null;
     }
-    const popup = window.open(
-      initiateResult.authorization_url,
-      POPUP_NAME,
-      POPUP_SPEC
-    );
+    // Open our popup route first so the user sees "Verifying…" immediately; we'll redirect to the operator via postMessage
+    const popupUrl = typeof window !== "undefined" ? `${window.location.origin}/demo/verification-popup` : "/demo/verification-popup";
+    const popup = window.open(popupUrl, POPUP_NAME, POPUP_SPEC);
     popupRef.current = popup;
     pendingStateRef.current = initiateResult.verification_id;
     const interval = setInterval(() => {
